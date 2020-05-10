@@ -66,8 +66,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     this.ctx = this.panel.nativeElement.getContext('2d');
     this.ctx.strokeStyle = Constant.LINE_COLOR;
     this.ctx.lineWidth = Constant.LINE_WIDTH;
-    this.ctx.font = `${Constant.FONT_BOLD} ${Constant.FONT_SIZE}px ${Constant.FONT_STYLE}`;
-    console.log(this.ctx.font);
+    this.ctx.font = `${Constant.FONT_SIZE}px ${Constant.FONT_STYLE}`;
     this.viewRowCount =
       Math.ceil((this.height - this.offsetHeight) / Constant.INIT_ROW_HEIGHT) +
       2;
@@ -99,6 +98,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
               ? this.generateColumnNum(ck)
               : null,
         },
+        fontWeight: 'bold',
         textAlign: 'center',
         textBaseline: 'middle',
         fontStyle: 'normal',
@@ -122,6 +122,13 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     this.ctx.fillStyle = columns[0].background;
     this.ctx.textAlign = columns[0].textAlign;
     this.ctx.textBaseline = columns[0].textBaseline;
+    if (
+      columns[0].fontWeight &&
+      this.ctx.font !==
+        `${columns[0].fontWeight} ${Constant.FONT_SIZE}px ${Constant.FONT_STYLE}`
+    ) {
+      this.ctx.font = `${columns[0].fontWeight} ${Constant.FONT_SIZE}px ${Constant.FONT_STYLE}`;
+    }
     for (let len = columns.length, i = len - 1; i >= 0; i--) {
       this.ctx.fillRect(
         columns[i].x,
@@ -189,11 +196,18 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       if (this.ctx.fillStyle !== (cell.color || Constant.BLACK_COLOR)) {
         this.ctx.fillStyle = cell.color || Constant.BLACK_COLOR;
       }
-      if (this.ctx.textAlign !== cell.textAlign) {
+      if (cell.textAlign && this.ctx.textAlign !== cell.textAlign) {
         this.ctx.textAlign = cell.textAlign;
       }
-      if (this.ctx.textBaseline !== cell.textBaseline) {
+      if (cell.textBaseline && this.ctx.textBaseline !== cell.textBaseline) {
         this.ctx.textBaseline = cell.textBaseline;
+      }
+      if (
+        cell.fontWeight &&
+        this.ctx.font !==
+          `${cell.fontWeight} ${Constant.FONT_SIZE}px ${Constant.FONT_STYLE}`
+      ) {
+        this.ctx.font = `${cell.fontWeight} ${Constant.FONT_SIZE}px ${Constant.FONT_STYLE}`;
       }
       this.ctx.fillText(
         cell.content.value,

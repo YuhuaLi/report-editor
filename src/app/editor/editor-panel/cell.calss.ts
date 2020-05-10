@@ -6,6 +6,7 @@ export default class Cell {
   content: any;
   background: string;
   color: string;
+  fontWeight: string;
   textAlign: 'left' | 'right' | 'center' | 'start' | 'end';
   textBaseline:
     | 'top'
