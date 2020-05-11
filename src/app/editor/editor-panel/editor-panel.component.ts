@@ -1,4 +1,4 @@
-import { Constant } from './constant.enum';
+import { Style } from './style.enum';
 import {
   Component,
   OnInit,
@@ -18,8 +18,6 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
 
   width = 0;
   height = 0;
-  columns = [];
-  rows = [];
   workCells = [];
   ViewOrigin = { x: 0, y: 0 };
   viewRowCount = 0;
@@ -47,87 +45,158 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
   ngOnInit(): void {
     this.width = this.elmentRef.nativeElement.offsetWidth;
     this.height = this.elmentRef.nativeElement.offsetHeight;
-
-    this.columns = Array.from(
-      {
-        length: Math.ceil(this.width / Constant.INIT_COLUMN_WIDTH),
-      },
-      (v, k) => ({
-        x: Constant.INIT_COLUMN_WIDTH * k,
-        y: 0,
-        width: Constant.INIT_COLUMN_WIDTH,
-        height: Constant.INIT_ROW_HEIGHT,
-        content: { text: this.generateColumnNum(k) },
-      })
-    );
   }
 
   ngAfterViewInit() {
     this.ctx = this.panel.nativeElement.getContext('2d');
-    this.ctx.strokeStyle = Constant.LINE_COLOR;
-    this.ctx.lineWidth = Constant.LINE_WIDTH;
-    this.ctx.font = `${Constant.FONT_SIZE}px ${Constant.FONT_STYLE}`;
     this.viewRowCount =
-      Math.ceil((this.height - this.offsetHeight) / Constant.INIT_ROW_HEIGHT) +
-      2;
+      Math.ceil((this.height - this.offsetHeight) / Style.cellHeight) + 2;
+    this.ctx.font = `${Style.rulerCellFontWeight} ${Style.rulerCellFontSize}px ${Style.rulerCellFontFamily}`;
     this.offsetWidth = Math.ceil(
       this.ctx.measureText(`  ${this.viewRowCount}  `).width
     );
     this.viewColumnCount =
-      Math.ceil((this.width - this.offsetWidth) / Constant.INIT_COLUMN_WIDTH) +
-      2;
+      Math.ceil((this.width - this.offsetWidth) / Style.cellWidth) + 2;
 
     this.cells = Array.from({ length: this.viewRowCount + 1 }, (rv, rk) => {
-      return Array.from({ length: this.viewColumnCount + 1 }, (cv, ck) => ({
-        position: { row: rk, column: ck },
-        x:
-          ck === 0
-            ? 0
-            : this.offsetWidth + (ck - 1) * Constant.INIT_COLUMN_WIDTH,
-        y:
-          rk === 0
-            ? 0
-            : this.offsetHeight + (rk - 1) * Constant.INIT_ROW_HEIGHT,
-        width: ck === 0 ? this.offsetWidth : Constant.INIT_COLUMN_WIDTH,
-        height: rk === 0 ? this.offsetHeight : Constant.INIT_ROW_HEIGHT,
-        content: {
-          value:
-            ck === 0 && rk !== 0
-              ? this.generateRowNum(rk)
-              : ck !== 0 && rk === 0
-              ? this.generateColumnNum(ck)
-              : null,
-        },
-        fontWeight: 'bold',
-        textAlign: 'center',
-        textBaseline: 'middle',
-        fontStyle: 'normal',
-        background:
-          (ck === 0 && rk !== 0) || (ck !== 0 && rk === 0)
-            ? Constant.BACK_COLOR
-            : null,
-        color: Constant.BLACK_COLOR,
-      })).reduce((acc, cur) => acc.push(cur) && acc, []);
+      return Array.from({ length: this.viewColumnCount + 1 }, (cv, ck) => {
+        const isXRuler = rk === 0;
+        const isYRuler = ck === 0;
+        return {
+          position: { row: rk, column: ck },
+          x: ck === 0 ? 0 : this.offsetWidth + (ck - 1) * Style.cellWidth,
+          y: isXRuler ? 0 : this.offsetHeight + (rk - 1) * Style.cellHeight,
+          width: isYRuler ? this.offsetWidth : Style.cellWidth,
+          height: isXRuler ? this.offsetHeight : Style.cellHeight,
+          type: isXRuler || isYRuler ? 'ruler' : 'cell',
+          content: {
+            value:
+              isYRuler && !isXRuler
+                ? this.generateRowNum(rk)
+                : isXRuler && !isYRuler
+                ? this.generateColumnNum(ck)
+                : null,
+          },
+          fontWeight:
+            isXRuler || isYRuler
+              ? Style.rulerCellFontWeight
+              : Style.cellFontWeight,
+          textAlign: Style.cellTextAlign,
+          textBaseline: Style.cellTextBaseline,
+          fontStyle: Style.cellFontStyle,
+          fontFamily:
+            isXRuler || isYRuler
+              ? Style.rulerCellFontFamily
+              : Style.cellFontFamily,
+          fontSize:
+            isXRuler || isYRuler ? Style.rulerCellFontSize : Style.cellFontSize,
+          background:
+            (isXRuler && !isYRuler) || (isYRuler && !isXRuler)
+              ? Style.rulerCellBackgroundColor
+              : Style.cellBackgroundColor,
+          color: isXRuler || isYRuler ? Style.rulerCellColor : Style.cellColor,
+          borderWidth:
+            isXRuler || isYRuler
+              ? Style.rulerCellBorderWidth
+              : Style.cellBorderWidth,
+          borderColor:
+            isXRuler || isYRuler
+              ? Style.rulerCellBorderColor
+              : Style.cellBorderColor,
+        };
+      }).reduce((acc, cur) => acc.push(cur) && acc, []);
     });
     console.log(this.cells);
-    this.viewCells = this.cells.slice(1).map((cells) => cells.slice(1));
+    // this.viewCells = this.cells.slice(1).map((cells) => cells.slice(1));
+    this.viewCells = this.cells;
     this.drawPanel();
     this.drawRuler();
+    this.drawSrcollBar();
+  }
+
+  drawSrcollBar() {
+    this.ctx.save();
+    this.ctx.fillStyle = Style.scrollBarBackgroundColor;
+    this.ctx.strokeStyle = Style.scrollBarBorderColor;
+    this.ctx.lineWidth = Style.scrollBarBorderWidth;
+    this.ctx.fillRect(
+      0,
+      this.height - Style.scrollBarWidth,
+      this.width - Style.scrollBarWidth,
+      this.height
+    );
+    this.ctx.strokeRect(
+      0,
+      this.height - Style.scrollBarWidth,
+      this.width - Style.scrollBarWidth,
+      this.height
+    );
+    this.ctx.fillRect(
+      this.width - Style.scrollBarWidth,
+      0,
+      this.width,
+      this.height - Style.scrollBarWidth
+    );
+    this.ctx.strokeRect(
+      this.width - Style.scrollBarWidth,
+      0,
+      this.width,
+      this.height - Style.scrollBarWidth
+    );
+    this.ctx.fillRect(
+      this.width - Style.scrollBarWidth,
+      this.height - Style.scrollBarWidth,
+      this.width,
+      this.height
+    );
+
+    this.ctx.fillStyle = Style.scrollBarThumbColor;
+    this.roundedRect(
+      this.width - Style.scrollBarWidth + Style.scrollBarThumbMargin,
+      Style.scrollBarBorderWidth,
+      Style.scrollBarWidth - 2 * Style.scrollBarThumbMargin,
+      100,
+      Style.scrollBarThumbRadius
+    );
+
+    this.ctx.restore();
+  }
+
+  roundedRect(x, y, width, height, radius) {
+    this.ctx.beginPath();
+    this.ctx.moveTo(x, y + radius);
+    this.ctx.lineTo(x, y + height - radius);
+    this.ctx.quadraticCurveTo(x, y + height, x + radius, y + height);
+    this.ctx.lineTo(x + width - radius, y + height);
+    this.ctx.quadraticCurveTo(
+      x + width,
+      y + height,
+      x + width,
+      y + height - radius
+    );
+    this.ctx.lineTo(x + width, y + radius);
+    this.ctx.quadraticCurveTo(x + width, y, x + width - radius, y);
+    this.ctx.lineTo(x + radius, y);
+    this.ctx.quadraticCurveTo(x, y, x, y + radius);
+    this.ctx.fill();
   }
 
   drawRuler() {
     this.ctx.save();
-    const columns = this.cells[0].slice(1);
-    const rows = this.cells.slice(1).map((cells) => cells[0]);
+    const columns = this.viewCells[0].slice(1);
+    const rows = this.viewCells.slice(1).map((cells) => cells[0]);
     this.ctx.fillStyle = columns[0].background;
     this.ctx.textAlign = columns[0].textAlign;
     this.ctx.textBaseline = columns[0].textBaseline;
     if (
-      columns[0].fontWeight &&
       this.ctx.font !==
-        `${columns[0].fontWeight} ${Constant.FONT_SIZE}px ${Constant.FONT_STYLE}`
+      `${columns[0].fontStyle} ${columns[0].fontWeight} ${columns[0].fontSize}px ${columns[0].fontFamily}`
     ) {
-      this.ctx.font = `${columns[0].fontWeight} ${Constant.FONT_SIZE}px ${Constant.FONT_STYLE}`;
+      this.ctx.font = `${columns[0].fontStyle} ${columns[0].fontWeight} ${columns[0].fontSize}px ${columns[0].fontFamily}`;
+      console.log(
+        this.ctx.font,
+        `${columns[0].fontStyle} ${columns[0].fontWeight} ${columns[0].fontSize}px ${columns[0].fontFamily}`
+      );
     }
     for (let len = columns.length, i = len - 1; i >= 0; i--) {
       this.ctx.fillRect(
@@ -140,7 +209,8 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     for (let len = rows.length, i = len - 1; i >= 0; i--) {
       this.ctx.fillRect(rows[i].x, rows[i].y, rows[i].width, rows[i].height);
     }
-    this.ctx.fillStyle = columns[0].color || Constant.BLACK_COLOR;
+    this.ctx.fillStyle = columns[0].color;
+    this.ctx.strokeStyle = Style.rulerCellBorderColor;
     for (let len = columns.length, i = len - 1; i >= 0; i--) {
       this.ctx.strokeRect(
         columns[i].x,
@@ -153,11 +223,10 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
           columns[i].content.value,
           columns[i].x + columns[i].width / 2,
           columns[i].y + columns[i].height / 2,
-          columns[i].width - 2 * Constant.LINE_WIDTH
+          columns[i].width - 2 * columns[0].borderWidth
         );
       }
     }
-    this.ctx.fillStyle = Constant.BLACK_COLOR;
     for (let len = rows.length, i = len - 1; i >= 0; i--) {
       this.ctx.strokeRect(rows[i].x, rows[i].y, rows[i].width, rows[i].height);
       if (rows[i].content.value) {
@@ -165,7 +234,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
           rows[i].content.value,
           rows[i].x + rows[i].width / 2,
           rows[i].y + rows[i].height / 2,
-          rows[i].width - 2 * Constant.LINE_WIDTH
+          rows[i].width - 2 * columns[0].borderWidth
         );
       }
     }
@@ -175,8 +244,8 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
   drawPanel() {
     this.ctx.save();
     this.ctx.clearRect(0, 0, this.width, this.height);
-    for (let rLen = this.viewCells.length, i = rLen - 1; i > -1; i--) {
-      for (let cLen = this.viewCells[i].length, j = cLen - 1; j > -1; j--) {
+    for (let rLen = this.viewCells.length, i = rLen - 1; i > 0; i--) {
+      for (let cLen = this.viewCells[i].length, j = cLen - 1; j > 0; j--) {
         this.drawCell(this.viewCells[i][j]);
       }
     }
@@ -191,10 +260,13 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       }
       this.ctx.fillRect(cell.x, cell.y, cell.width, cell.height);
     }
+    if (this.ctx.strokeStyle !== cell.borderColor) {
+      this.ctx.strokeStyle = cell.borderColor;
+    }
     this.ctx.strokeRect(cell.x, cell.y, cell.width, cell.height);
     if (cell.content.value) {
-      if (this.ctx.fillStyle !== (cell.color || Constant.BLACK_COLOR)) {
-        this.ctx.fillStyle = cell.color || Constant.BLACK_COLOR;
+      if (this.ctx.fillStyle !== cell.color) {
+        this.ctx.fillStyle = cell.color;
       }
       if (cell.textAlign && this.ctx.textAlign !== cell.textAlign) {
         this.ctx.textAlign = cell.textAlign;
@@ -203,17 +275,16 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
         this.ctx.textBaseline = cell.textBaseline;
       }
       if (
-        cell.fontWeight &&
         this.ctx.font !==
-          `${cell.fontWeight} ${Constant.FONT_SIZE}px ${Constant.FONT_STYLE}`
+        `${cell.fontStyle} ${cell.fontWeight} ${cell.fontSize}px ${cell.fontFamily}`
       ) {
-        this.ctx.font = `${cell.fontWeight} ${Constant.FONT_SIZE}px ${Constant.FONT_STYLE}`;
+        this.ctx.font = `${cell.fontStyle} ${cell.fontWeight} ${cell.fontSize}px ${cell.fontFamily}`;
       }
       this.ctx.fillText(
         cell.content.value,
         cell.x + cell.width / 2,
         cell.y + cell.height / 2,
-        cell.width - 2 * Constant.LINE_WIDTH
+        cell.width - 2 * cell.borderWidth
       );
     }
   }
@@ -224,7 +295,6 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     columnStart: number;
     columnEnd: number;
   }) {
-    console.log(this.activeRange);
     this.ctx.save();
     if (this.activeRange) {
       const rowStart = Math.min(
@@ -253,7 +323,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
           ) {
             continue;
           }
-          this.drawCell(this.cells[i][j]);
+          this.drawCell(this.viewCells[i][j]);
         }
       }
     }
@@ -275,18 +345,18 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
         this.activeRange.columnStart,
         this.activeRange.columnEnd
       );
-      this.ctx.strokeStyle = Constant.ACTIVE_LINE_COLOR;
-      this.ctx.shadowColor = Constant.BLACK_COLOR;
-      this.ctx.shadowBlur = 5;
+      this.ctx.strokeStyle = Style.activeCellBorderColor;
+      this.ctx.shadowColor = Style.activeCellShadowColor;
+      this.ctx.shadowBlur = Style.activeCellShadowBlur;
       this.ctx.strokeRect(
-        this.cells[rowStart][columnStart].x,
-        this.cells[rowStart][columnStart].y,
-        this.cells[rowEnd][columnEnd].x -
-          this.cells[rowStart][columnStart].x +
-          this.cells[rowEnd][columnEnd].width,
-        this.cells[rowEnd][columnEnd].y -
-          this.cells[rowStart][columnStart].y +
-          this.cells[rowEnd][columnEnd].height
+        this.viewCells[rowStart][columnStart].x,
+        this.viewCells[rowStart][columnStart].y,
+        this.viewCells[rowEnd][columnEnd].x -
+          this.viewCells[rowStart][columnStart].x +
+          this.viewCells[rowEnd][columnEnd].width,
+        this.viewCells[rowEnd][columnEnd].y -
+          this.viewCells[rowStart][columnStart].y +
+          this.viewCells[rowEnd][columnEnd].height
       );
     }
     this.ctx.restore();
@@ -316,7 +386,15 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     // console.log('mouseenter', event);
   }
 
+  onContextMenu(event: MouseEvent) {
+    event.returnValue = false;
+  }
+
   onMouseDown(event: MouseEvent) {
+    if (event.button === 2) {
+      event.returnValue = false;
+      return;
+    }
     this.state.isMouseDown = true;
     if (
       (event.clientX < this.offsetWidth && event.clientY > this.offsetHeight) ||
@@ -328,8 +406,8 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     canvas.width = this.width;
     canvas.height = this.height;
     const ctx = canvas.getContext('2d');
-    for (let rLen = this.viewCells.length, i = rLen - 1; i > -1; i--) {
-      for (let cLen = this.viewCells[i].length, j = cLen - 1; j > -1; j--) {
+    for (let rLen = this.viewCells.length, i = rLen - 1; i > 0; i--) {
+      for (let cLen = this.viewCells[i].length, j = cLen - 1; j > 0; j--) {
         const cell = this.viewCells[i][j];
         ctx.clearRect(0, 0, this.width, this.height);
         ctx.rect(cell.x, cell.y, cell.width, cell.height);
@@ -344,14 +422,11 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
         }
       }
     }
-    console.log('not found');
   }
 
+  // @throttle(20)
   onMouseMove(event: MouseEvent) {
-    if (
-      (event.clientX < this.offsetWidth && event.clientY > this.offsetHeight) ||
-      (event.clientX > this.offsetWidth && event.clientY < this.offsetHeight)
-    ) {
+    if (event.clientX < this.offsetWidth || event.clientY < this.offsetHeight) {
       this.panel.nativeElement.style.cursor = 'default';
     } else {
       this.panel.nativeElement.style.cursor = 'cell';
@@ -372,8 +447,8 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     canvas.width = this.width;
     canvas.height = this.height;
     const ctx = canvas.getContext('2d');
-    for (let rLen = this.viewCells.length, i = rLen - 1; i > -1; i--) {
-      for (let cLen = this.viewCells[i].length, j = cLen - 1; j > -1; j--) {
+    for (let rLen = this.viewCells.length, i = rLen - 1; i > 0; i--) {
+      for (let cLen = this.viewCells[i].length, j = cLen - 1; j > 0; j--) {
         const cell = this.viewCells[i][j];
         ctx.clearRect(0, 0, this.width, this.height);
         ctx.rect(cell.x, cell.y, cell.width, cell.height);

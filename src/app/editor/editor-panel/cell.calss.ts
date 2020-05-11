@@ -7,6 +7,9 @@ export default class Cell {
   background: string;
   color: string;
   fontWeight: string;
+  fontStyle: string;
+  fontSize: number;
+  fontFamily: string;
   textAlign: 'left' | 'right' | 'center' | 'start' | 'end';
   textBaseline:
     | 'top'
@@ -16,4 +19,7 @@ export default class Cell {
     | 'ideographic'
     | 'bottom';
   position: { row: number; column: number };
+  type: string;
+  borderWidth: number;
+  borderColor: string;
 }
