@@ -29,5 +29,6 @@ export enum Style {
   activeCellBorderWidth = 3,
   activeCellBorderColor = '#096',
   activeCellShadowColor = '#333',
-  activeCellShadowBlur = 5
+  activeCellShadowBlur = 5,
+  selectedCellBackgroundColor = '#ecf3ff1a'
 }
