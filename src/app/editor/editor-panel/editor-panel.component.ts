@@ -35,8 +35,12 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     columnStart: number;
     rowEnd: number;
     columnEnd: number;
+  } = { rowStart: 1, columnStart: 1, rowEnd: 1, columnEnd: 1 };
+  state: any = {
+    isSelectCell: false,
+    isScrollYThumbHover: false,
+    isSelectScrollYThumb: false,
   };
-  state: any = {};
   isTicking = false;
   scrollLeft = 0;
   scrollTop = 0;
@@ -44,6 +48,8 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
   scrollHeight = 0;
   clientWidth = 0;
   clientHeight = 0;
+  mousePoint: any;
+  autoScrollTimeoutID: any;
 
   ctx: CanvasRenderingContext2D;
 
@@ -63,6 +69,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     this.offsetWidth = Math.ceil(
       this.ctx.measureText(`  ${this.viewRowCount}  `).width
     );
+    console.log(this.offsetWidth);
     this.clientWidth = this.width - this.offsetWidth - Style.scrollBarWidth;
     this.viewColumnCount =
       Math.ceil((this.width - this.offsetWidth) / Style.cellWidth) + 2;
@@ -120,20 +127,21 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
         };
       }).reduce((acc, cur) => acc.push(cur) && acc, []);
     });
-    console.log(this.cells);
+    this.scrollWidth =
+      this.cells[0][this.cells[0].length - 1].x +
+      this.cells[0][this.cells[0].length - 1].width;
     this.scrollHeight =
       this.cells[this.cells.length - 1][0].y +
       this.cells[this.cells.length - 1][0].height -
       this.offsetHeight;
-    console.log(this.scrollHeight);
+    console.log(this.scrollWidth, this.scrollHeight);
     console.log(this.cells);
-    // this.viewCells = this.cells.slice(1).map((cells) => cells.slice(1));
-    // this.viewCells = this.cells;
+
     this.drawPanel();
     this.setActive(this.activeRange);
   }
 
-  drawScrollBar() {
+  drawScrollBarX() {
     this.ctx.save();
     this.ctx.fillStyle = Style.scrollBarBackgroundColor;
     this.ctx.strokeStyle = Style.scrollBarBorderColor;
@@ -156,6 +164,33 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       this.width,
       this.height - Style.scrollBarWidth
     );
+    this.ctx.fillStyle = this.state.isScrollXThumbHover
+      ? Style.scrollBarThumbActiveColor
+      : Style.scrollBarThumbColor;
+
+    let scrollXThumbHeight =
+      (this.clientWidth / this.scrollWidth) * this.clientWidth;
+    if (scrollXThumbHeight < Style.scrollBarThumbMinSize) {
+      scrollXThumbHeight = Style.scrollBarThumbMinSize;
+    }
+
+    this.roundedRect(
+      this.offsetWidth +
+        (this.scrollLeft * (this.clientWidth - scrollXThumbHeight)) /
+          (this.scrollWidth - this.clientWidth),
+      this.height - Style.scrollBarWidth + Style.scrollBarThumbMargin,
+      scrollXThumbHeight,
+      Style.scrollBarWidth - 2 * Style.scrollBarThumbMargin,
+      Style.scrollBarThumbRadius
+    );
+
+    this.ctx.restore();
+  }
+  drawScrollBarY() {
+    this.ctx.save();
+    this.ctx.fillStyle = Style.scrollBarBackgroundColor;
+    this.ctx.strokeStyle = Style.scrollBarBorderColor;
+    this.ctx.lineWidth = Style.scrollBarBorderWidth;
     this.ctx.strokeRect(
       this.width - Style.scrollBarWidth,
       this.offsetHeight,
@@ -169,18 +204,30 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       this.height
     );
 
-    this.ctx.fillStyle = Style.scrollBarThumbColor;
+    this.ctx.fillStyle = this.state.isScrollYThumbHover
+      ? Style.scrollBarThumbActiveColor
+      : Style.scrollBarThumbColor;
 
+    let scrollYThumbHeight =
+      (this.clientHeight / this.scrollHeight) * this.clientHeight;
+    if (scrollYThumbHeight < Style.scrollBarThumbMinSize) {
+      scrollYThumbHeight = Style.scrollBarThumbMinSize;
+    }
     this.roundedRect(
       this.width - Style.scrollBarWidth + Style.scrollBarThumbMargin,
       this.offsetHeight +
-        Math.floor(this.scrollTop * (this.clientHeight / this.scrollHeight)),
+        (this.scrollTop * (this.clientHeight - scrollYThumbHeight)) /
+          (this.scrollHeight - this.clientHeight),
       Style.scrollBarWidth - 2 * Style.scrollBarThumbMargin,
-      Math.floor((this.clientHeight / this.scrollHeight) * this.clientHeight),
+      scrollYThumbHeight,
       Style.scrollBarThumbRadius
     );
-
     this.ctx.restore();
+  }
+
+  drawScrollBar() {
+    this.drawScrollBarX();
+    this.drawScrollBarY();
   }
 
   roundedRect(x, y, width, height, radius) {
@@ -214,10 +261,6 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       `${columns[0].fontStyle} ${columns[0].fontWeight} ${columns[0].fontSize}px ${columns[0].fontFamily}`
     ) {
       this.ctx.font = `${columns[0].fontStyle} ${columns[0].fontWeight} ${columns[0].fontSize}px ${columns[0].fontFamily}`;
-      console.log(
-        this.ctx.font,
-        `${columns[0].fontStyle} ${columns[0].fontWeight} ${columns[0].fontSize}px ${columns[0].fontFamily}`
-      );
     }
     for (let len = columns.length, i = len - 1; i >= 0; i--) {
       this.ctx.fillRect(
@@ -276,19 +319,55 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
   }
 
   drawPanel() {
-    const startIndex =
+    const startRowIndex =
       this.cells.slice(1).findIndex((row, index) => {
-        console.log(index);
         return (
           row[0].y - this.scrollTop <= this.offsetHeight &&
-          this.cells[index + 2][0].y - this.scrollTop >= this.offsetHeight
+          row[0].y + row[0].height - this.scrollTop >= this.offsetHeight
         );
       }) + 1;
+    const startColumnIndex =
+      this.cells[0].slice(1).findIndex((cell, index) => {
+        return (
+          cell.x - this.scrollLeft <= this.offsetWidth &&
+          cell.x + cell.width - this.scrollLeft >= this.offsetWidth
+        );
+      }) + 1;
+    console.log(
+      this.cells[0].slice(1).findIndex((cell, index) => {
+        return (
+          cell.x - this.scrollLeft <= this.offsetWidth &&
+          cell.x + cell.width - this.scrollLeft >= this.offsetWidth
+        );
+      })
+    );
+    console.log(this.clientWidth);
+    console.log(
+      startRowIndex,
+      startColumnIndex,
+      this.scrollLeft,
+      this.cells[0][4]
+    );
     this.viewCells = [
-      this.cells[0],
-      ...this.cells.slice(startIndex, startIndex + this.viewRowCount - 1),
+      [
+        this.cells[0][0],
+        ...this.cells[0].slice(
+          startColumnIndex,
+          startColumnIndex + this.viewColumnCount - 1
+        ),
+      ],
+      ...this.cells
+        .slice(startRowIndex, startRowIndex + this.viewRowCount - 1)
+        .map((row) => [
+          row[0],
+          ...row.slice(
+            startColumnIndex,
+            startColumnIndex + this.viewColumnCount - 1
+          ),
+        ]),
     ];
-
+    console.log(this.viewCells);
+    console.log(this.scrollLeft)
     this.ctx.save();
     this.ctx.clearRect(0, 0, this.width, this.height);
     for (let rLen = this.viewCells.length, i = rLen - 1; i > 0; i--) {
@@ -442,12 +521,26 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
   }
 
   onMouseOver(event: MouseEvent) {
-    this.state.isMouseDown = false;
-    // console.log('mouseover', event);
+    console.log('mouseover', event);
+  }
+
+  onMouseOut(event: MouseEvent) {
+    this.state.isSelectCell = false;
+    this.state.isScrollXThumbHover = false;
+    this.state.isScrollYThumbHover = false;
+    this.state.isSelectScrollXThumb = false;
+    this.state.isSelectScrollYThumb = false;
+    this.drawScrollBar();
+    this.mousePoint = null;
+    console.log('mouseout', event);
   }
 
   onMouseEnter(event) {
-    // console.log('mouseenter', event);
+    console.log('mouseenter', event);
+  }
+
+  onMouseLeave(event) {
+    console.log('mouseleave', event);
   }
 
   onContextMenu(event: MouseEvent) {
@@ -486,6 +579,39 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       inRange(y, this.offsetHeight + this.clientHeight, this.height, true)
     );
   }
+
+  inThumbAreaOfScrollBarX(x: number, y: number, judegedInScrollBarX = false) {
+    if (!judegedInScrollBarX && !this.inScrollXBarArea(x, y)) {
+      return;
+    }
+    let scrollXThumbHeight =
+      (this.clientWidth / this.scrollWidth) * this.clientWidth;
+    if (scrollXThumbHeight < Style.scrollBarThumbMinSize) {
+      scrollXThumbHeight = Style.scrollBarThumbMinSize;
+    }
+    const scrollYThumbLeft =
+      this.offsetWidth +
+      (this.scrollLeft * (this.clientWidth - scrollXThumbHeight)) /
+        (this.scrollWidth - this.clientWidth);
+    return inRange(x, scrollYThumbLeft, scrollYThumbLeft + scrollXThumbHeight);
+  }
+
+  inThumbAreaOfScrollBarY(x: number, y: number, judegedInScrollBarY = false) {
+    if (!judegedInScrollBarY && !this.inScrollYBarArea(x, y)) {
+      return false;
+    }
+    let scrollYThumbHeight =
+      (this.clientHeight / this.scrollHeight) * this.clientHeight;
+    if (scrollYThumbHeight < Style.scrollBarThumbMinSize) {
+      scrollYThumbHeight = Style.scrollBarThumbMinSize;
+    }
+    const scrollYThumbTop =
+      this.offsetHeight +
+      (this.scrollTop * (this.clientHeight - scrollYThumbHeight)) /
+        (this.scrollHeight - this.clientHeight);
+    return inRange(y, scrollYThumbTop, scrollYThumbTop + scrollYThumbHeight);
+  }
+
   inSelectAllArea(x: number, y: number) {
     return (
       inRange(x, 0, this.offsetWidth, true) &&
@@ -498,6 +624,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       event.returnValue = false;
       return;
     }
+    this.mousePoint = { x: event.clientX, y: event.clientY };
     if (this.inSelectAllArea(event.clientX, event.clientY)) {
       console.log('all');
     } else if (this.inRulerXArea(event.clientX, event.clientY)) {
@@ -506,10 +633,22 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       console.log('rulery');
     } else if (this.inScrollXBarArea(event.clientX, event.clientY)) {
       console.log('scrollx');
+      if (this.inThumbAreaOfScrollBarX(event.clientX, event.clientY, true)) {
+        this.state.isSelectScrollXThumb = true;
+      }
     } else if (this.inScrollYBarArea(event.clientX, event.clientY)) {
       console.log('scrolly');
+      if (this.inThumbAreaOfScrollBarY(event.clientX, event.clientY, true)) {
+        this.state.isSelectScrollYThumb = true;
+      }
     } else if (this.inCellArea(event.clientX, event.clientY)) {
-      this.state.isMouseDown = true;
+      setTimeout(
+        () =>
+          this.mousePoint &&
+          this.autoScroll(this.mousePoint.x, this.mousePoint.y),
+        200
+      );
+      this.state.isSelectCell = true;
       const canvas = document.createElement('canvas');
       canvas.width = this.width;
       canvas.height = this.height;
@@ -525,10 +664,17 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
             cell.height
           );
           if (ctx.isPointInPath(event.clientX, event.clientY)) {
-            console.log(cell.position);
             this.setActive({
-              rowStart: cell.position.row,
-              columnStart: cell.position.column,
+              rowStart:
+                (event.shiftKey &&
+                  this.activeRange &&
+                  this.activeRange.rowStart) ||
+                cell.position.row,
+              columnStart:
+                (event.shiftKey &&
+                  this.activeRange &&
+                  this.activeRange.columnStart) ||
+                cell.position.column,
               rowEnd: cell.position.row,
               columnEnd: cell.position.column,
             });
@@ -541,20 +687,109 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
 
   // @throttle(20)
   onMouseMove(event: MouseEvent) {
-    if (!this.inCellArea(event.clientX, event.clientY)) {
+    if (
+      (!this.inCellArea(event.clientX, event.clientY) &&
+        !this.state.isSelectCell) ||
+      this.state.isSelectScrollYThumb
+    ) {
       this.panel.nativeElement.style.cursor = 'default';
     } else {
       this.panel.nativeElement.style.cursor = 'cell';
     }
-    if (this.state.isMouseDown) {
-      if (!this.isTicking) {
-        requestAnimationFrame(() => {
-          this.calcActive(event.clientX, event.clientY);
-          this.isTicking = false;
-        });
-      }
-      this.isTicking = true;
+    const preIsScrollXThumbHover = this.state.isScrollXThumbHover;
+    const preIsScrollYThumbHover = this.state.isScrollYThumbHover;
+    this.state.isScrollXThumbHover = this.inThumbAreaOfScrollBarX(
+      event.clientX,
+      event.clientY
+    );
+    this.state.isScrollYThumbHover = this.inThumbAreaOfScrollBarY(
+      event.clientX,
+      event.clientY
+    );
+    if (
+      (preIsScrollXThumbHover !== this.state.isScrollXThumbHover &&
+        !this.state.isSelectScrollXThumb) ||
+      (preIsScrollYThumbHover !== this.state.isScrollYThumbHover &&
+        !this.state.isSelectScrollYThumb)
+    ) {
+      this.drawScrollBar();
     }
+
+    if (!this.isTicking) {
+      requestAnimationFrame(() => {
+        if (this.state.isSelectCell) {
+          this.calcActive(event.clientX, event.clientY);
+        } else if (this.state.isSelectScrollYThumb) {
+          this.calcScrollY(event.clientX, event.clientY);
+        } else if (this.state.isSelectScrollXThumb) {
+          this.calcScrollX(event.clientX, event.clientY);
+        }
+        this.mousePoint = { x: event.clientX, y: event.clientY };
+        this.isTicking = false;
+      });
+    }
+
+    this.isTicking = true;
+  }
+
+  autoScroll(x: number, y: number) {
+    console.log(x, y, this.mousePoint);
+    if (
+      x === this.mousePoint.x &&
+      y === this.mousePoint.y &&
+      this.state.isSelectCell
+    ) {
+      if (y > this.offsetHeight + this.clientHeight) {
+        this.scrollY(Style.cellHeight);
+        this.calcActive(this.mousePoint.x, this.mousePoint.y);
+      } else if (y < this.offsetHeight) {
+        this.scrollY(-1 * Style.cellHeight);
+        this.calcActive(this.mousePoint.x, this.mousePoint.y);
+      }
+      this.autoScrollTimeoutID = setTimeout(
+        () =>
+          this.mousePoint &&
+          this.state.isSelectCell &&
+          this.autoScroll(this.mousePoint.x, this.mousePoint.y),
+        100
+      );
+    } else {
+      if (this.autoScrollTimeoutID) {
+        clearTimeout(this.autoScrollTimeoutID);
+        this.autoScrollTimeoutID = null;
+      }
+      this.autoScrollTimeoutID = setTimeout(
+        () =>
+          this.mousePoint &&
+          this.state.isSelectCell &&
+          this.autoScroll(this.mousePoint.x, this.mousePoint.y),
+        100
+      );
+    }
+  }
+
+  calcScrollX(x: number, y: number) {
+    let scrollXThumbHeight =
+      (this.clientWidth / this.scrollWidth) * this.clientWidth;
+    if (scrollXThumbHeight < Style.scrollBarThumbMinSize) {
+      scrollXThumbHeight = Style.scrollBarThumbMinSize;
+    }
+    const deltaX =
+      ((x - this.mousePoint.x) * (this.scrollWidth - this.clientWidth)) /
+      (this.clientWidth - scrollXThumbHeight);
+    this.scrollX(deltaX);
+  }
+
+  calcScrollY(x: number, y: number) {
+    let scrollYThumbHeight =
+      (this.clientHeight / this.scrollHeight) * this.clientHeight;
+    if (scrollYThumbHeight < Style.scrollBarThumbMinSize) {
+      scrollYThumbHeight = Style.scrollBarThumbMinSize;
+    }
+    const deltaY =
+      ((y - this.mousePoint.y) * (this.scrollHeight - this.clientHeight)) /
+      (this.clientHeight - scrollYThumbHeight);
+    this.scrollY(deltaY);
   }
 
   calcActive(x: number, y: number) {
@@ -573,7 +808,6 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
           cell.height
         );
         if (ctx.isPointInPath(x, y)) {
-          console.log(cell.position);
           this.setActive({
             rowStart: this.activeRange.rowStart,
             columnStart: this.activeRange.columnStart,
@@ -587,28 +821,58 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
   }
 
   onMouseUp(event: MouseEvent) {
-    this.state.isMouseDown = false;
+    this.state.isSelectCell = false;
+    this.state.isSelectScrollYThumb = false;
+    this.state.isSelectScrollXThumb = false;
+    this.mousePoint = null;
+  }
+
+  scrollX(deltaX: number) {
+    if (
+      (this.scrollLeft >= this.scrollWidth - this.clientWidth && deltaX > 0) ||
+      (this.scrollLeft === 0 && deltaX < 0)
+    ) {
+      return;
+    }
+    this.scrollLeft += deltaX;
+    if (this.scrollLeft >= this.scrollWidth - this.clientWidth) {
+      this.scrollLeft = this.scrollWidth - this.clientWidth;
+    } else if (this.scrollLeft <= 0) {
+      this.scrollLeft = 0;
+    }
+
+    this.drawPanel();
+    this.setActive(this.activeRange);
+  }
+
+  scrollY(deltaY: number) {
+    if (
+      (this.scrollTop >= this.scrollHeight - this.clientHeight && deltaY > 0) ||
+      (this.scrollTop === 0 && deltaY < 0)
+    ) {
+      return;
+    }
+    this.scrollTop += deltaY;
+    if (this.scrollTop >= this.scrollHeight - this.clientHeight) {
+      this.scrollTop = this.scrollHeight - this.clientHeight;
+    } else if (this.scrollTop <= 0) {
+      this.scrollTop = 0;
+    }
+
+    this.drawPanel();
+    this.setActive(this.activeRange);
   }
 
   onWheel(event: WheelEvent) {
     console.log('wheel', event);
-    if (event.deltaY) {
-      if (
-        (this.scrollTop >= this.scrollHeight - this.clientHeight &&
-          event.deltaY > 0) ||
-        (this.scrollTop === 0 && event.deltaY < 0)
-      ) {
-        return;
-      }
-      this.scrollTop += event.deltaY;
-      if (this.scrollTop >= this.scrollHeight - this.clientHeight) {
-        this.scrollTop = this.scrollHeight - this.clientHeight;
-      } else if (this.scrollTop <= 0) {
-        this.scrollTop = 0;
-      }
-      this.drawPanel();
-      this.setActive(this.activeRange);
+    if (!this.isTicking) {
+      requestAnimationFrame(() => {
+        this.scrollY(event.deltaY);
+
+        this.isTicking = false;
+      });
     }
+    this.isTicking = true;
   }
 
   onDblClick(event: MouseEvent) {

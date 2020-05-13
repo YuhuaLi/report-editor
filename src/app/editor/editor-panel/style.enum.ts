@@ -2,6 +2,7 @@ export enum Style {
   scrollBarBackgroundColor = '#f0f0f0',
   scrollBarBorderColor = '#cacaca',
   scrollBarThumbColor = '#c0c0c0',
+  scrollBarThumbActiveColor = '#7b7b7b',
   scrollBarThumbMargin = 2,
   scrollBarBorderWidth = 0.5,
   scrollBarWidth = 18,
