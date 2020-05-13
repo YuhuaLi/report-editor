@@ -10,14 +10,8 @@ export default class Cell {
   fontStyle: string;
   fontSize: number;
   fontFamily: string;
-  textAlign: 'left' | 'right' | 'center' | 'start' | 'end';
-  textBaseline:
-    | 'top'
-    | 'hanging'
-    | 'middle'
-    | 'alphabetic'
-    | 'ideographic'
-    | 'bottom';
+  textAlign: CanvasTextAlign;
+  textBaseline: CanvasTextBaseline;
   position: { row: number; column: number };
   type: string;
   borderWidth: number;
