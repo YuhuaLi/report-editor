@@ -690,7 +690,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
         ctx.clearRect(0, 0, this.width, this.height);
         ctx.rect(
           rowCells[i].x,
-          rowCells[i].y,
+          rowCells[i].y - this.scrollTop,
           rowCells[i].width,
           rowCells[i].height
         );
