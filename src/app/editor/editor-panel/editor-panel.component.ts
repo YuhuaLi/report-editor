@@ -710,6 +710,18 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       console.log('scrollx');
       if (this.inThumbAreaOfScrollBarX(event.clientX, event.clientY, true)) {
         this.state.isSelectScrollXThumb = true;
+      }else if (
+        inRange(
+          event.clientX,
+          this.offsetWidth,
+          this.getScrollXThumbLeft(this.getScrollXThumbHeight())
+        )
+      ) {
+        this.scrollX(-1 * Style.cellWidth);
+        this.setActive(this.activeRange);
+      } else {
+        this.scrollX(Style.cellWidth);
+        this.setActive(this.activeRange);
       }
     } else if (this.inScrollYBarArea(event.clientX, event.clientY)) {
       console.log('scrolly');
