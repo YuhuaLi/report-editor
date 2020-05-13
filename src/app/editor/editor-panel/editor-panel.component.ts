@@ -64,9 +64,8 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
 
   ngAfterViewInit() {
     this.ctx = this.panel.nativeElement.getContext('2d');
-    this.viewRowCount = Math.ceil(
-      (this.height - this.offsetHeight) / Style.cellHeight
-    );
+    this.viewRowCount =
+      Math.ceil((this.height - this.offsetHeight) / Style.cellHeight) + 2;
     this.ctx.font = `${Style.rulerCellFontWeight} ${Style.rulerCellFontSize}px ${Style.rulerCellFontFamily}`;
     this.offsetWidth = Math.ceil(
       this.ctx.measureText(`  ${this.viewRowCount}  `).width
@@ -690,7 +689,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
         ctx.clearRect(0, 0, this.width, this.height);
         ctx.rect(
           rowCells[i].x,
-          rowCells[i].y - this.scrollTop,
+          rowCells[i].y,
           rowCells[i].width,
           rowCells[i].height
         );
@@ -710,18 +709,6 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       console.log('scrollx');
       if (this.inThumbAreaOfScrollBarX(event.clientX, event.clientY, true)) {
         this.state.isSelectScrollXThumb = true;
-      }else if (
-        inRange(
-          event.clientX,
-          this.offsetWidth,
-          this.getScrollXThumbLeft(this.getScrollXThumbHeight())
-        )
-      ) {
-        this.scrollX(-1 * Style.cellWidth);
-        this.setActive(this.activeRange);
-      } else {
-        this.scrollX(Style.cellWidth);
-        this.setActive(this.activeRange);
       }
     } else if (this.inScrollYBarArea(event.clientX, event.clientY)) {
       console.log('scrolly');
@@ -833,33 +820,27 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       y === this.mousePoint.y &&
       this.state.isSelectCell
     ) {
-      if (!this.isTicking) {
-        requestAnimationFrame(() => {
-          if (y > this.offsetHeight + this.clientHeight) {
-            this.scrollY(Style.cellHeight);
-            this.calcActive(this.mousePoint.x, this.mousePoint.y);
-          } else if (y < this.offsetHeight) {
-            this.scrollY(-1 * Style.cellHeight);
-            this.calcActive(this.mousePoint.x, this.mousePoint.y);
-          }
-          if (x > this.offsetWidth + this.clientWidth) {
-            this.scrollX(Style.cellWidth);
-            this.calcActive(this.mousePoint.x, this.mousePoint.y);
-          } else if (x < this.offsetWidth) {
-            this.scrollX(-1 * Style.cellWidth);
-            this.calcActive(this.mousePoint.x, this.mousePoint.y);
-          }
-          this.autoScrollTimeoutID = setTimeout(
-            () =>
-              this.mousePoint &&
-              this.state.isSelectCell &&
-              this.autoScroll(this.mousePoint.x, this.mousePoint.y),
-            50
-          );
-          this.isTicking = false;
-        });
+      if (y > this.offsetHeight + this.clientHeight) {
+        this.scrollY(Style.cellHeight);
+        this.calcActive(this.mousePoint.x, this.mousePoint.y);
+      } else if (y < this.offsetHeight) {
+        this.scrollY(-1 * Style.cellHeight);
+        this.calcActive(this.mousePoint.x, this.mousePoint.y);
       }
-      this.isTicking = true;
+      if (x > this.offsetWidth + this.clientWidth) {
+        this.scrollX(Style.cellWidth);
+        this.calcActive(this.mousePoint.x, this.mousePoint.y);
+      } else if (x < this.offsetWidth) {
+        this.scrollX(-1 * Style.cellWidth);
+        this.calcActive(this.mousePoint.x, this.mousePoint.y);
+      }
+      this.autoScrollTimeoutID = setTimeout(
+        () =>
+          this.mousePoint &&
+          this.state.isSelectCell &&
+          this.autoScroll(this.mousePoint.x, this.mousePoint.y),
+        50
+      );
     } else {
       if (this.autoScrollTimeoutID) {
         clearTimeout(this.autoScrollTimeoutID);
@@ -954,7 +935,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
         this.cells[0][this.cells[0].length - 1].x +
         this.cells[0][this.cells[0].length - 1].width -
         this.offsetWidth;
-      this.scrollLeft = this.scrollWidth - this.clientWidth - Style.cellWidth;
+      // this.scrollLeft = this.scrollWidth - this.clientWidth - Style.cellWidth;
     } else if (this.scrollLeft <= 0) {
       this.scrollLeft = 0;
     }
@@ -985,7 +966,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
         this.cells[this.cells.length - 1][0].y +
         this.cells[this.cells.length - 1][0].height -
         this.offsetHeight;
-      this.scrollTop = this.scrollHeight - this.clientHeight - Style.cellHeight;
+      // this.scrollTop = this.scrollHeight - this.clientHeight - Style.cellHeight;
     } else if (this.scrollTop <= 0) {
       this.scrollTop = 0;
     }
