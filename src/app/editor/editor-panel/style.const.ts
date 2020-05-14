@@ -31,6 +31,6 @@ export const Style = {
   activeCellBorderWidth: 4,
   activeCellBorderColor: '#096',
   activeCellShadowColor: '#0f0',
-  activeCellShadowBlur: 5,
-  selectedCellBackgroundColor: '#ecf3ff1a',
+  activeCellShadowBlur: 1,
+  selectedCellBackgroundColor: '#0000001f',
 };
