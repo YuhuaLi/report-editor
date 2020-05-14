@@ -1,16 +1,21 @@
-<canvas
-  #panel
-  class="panel"
-  [width]="width"
-  [height]="height"
-  (mouseover)="onMouseOver($event)"
-  (mouseout)="onMouseOut($event)"
-  (mouseenter)="onMouseEnter($event)"
-  (mouseLeave)="onMouseLeave($event)"
-  (mousedown)="onMouseDown($event)"
-  (mousemove)="onMouseMove($event)"
-  (mouseup)="onMouseUp($event)"
-  (wheel)="onWheel($event)"
-  (contextmenu)="onContextMenu($event)"
-  (dblclick)="onDblClick($event)"
-></canvas>
+<div class="panel panel-wrapper">
+  <canvas
+    tabindex="1"
+    #panel
+    class="panel"
+    (mouseover)="onMouseOver($event)"
+    (mouseout)="onMouseOut($event)"
+    (mouseenter)="onMouseEnter($event)"
+    (mouseLeave)="onMouseLeave($event)"
+    (mousedown)="onMouseDown($event)"
+    (mousemove)="onMouseMove($event)"
+    (mouseup)="onMouseUp($event)"
+    (wheel)="onWheel($event)"
+    (contextmenu)="onContextMenu($event)"
+    (keydown)="onKeyDown($event)"
+  ></canvas>
+  <canvas
+    #actionPanel
+    class="action-panel"
+  ></canvas>
+</div>

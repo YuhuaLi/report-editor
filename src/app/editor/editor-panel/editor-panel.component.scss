@@ -1,0 +1,18 @@
+:host {
+  .panel-wrapper {
+    position: relative;
+  }
+
+  canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+  }
+
+  .action-panel {
+    background: transparent;
+    pointer-events: none;
+  }
+}
