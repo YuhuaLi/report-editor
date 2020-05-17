@@ -1890,8 +1890,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
             this.scrollY(
               this.cells[this.activeCellPos.row][this.activeCellPos.column].y -
                 this.scrollTop -
-                this.cells[this.activeCellPos.row][this.activeCellPos.column]
-                  .height
+                this.offsetHeight
             );
           } else if (
             this.cells[this.activeCellPos.row][this.activeCellPos.column].y +
@@ -1946,7 +1945,8 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
               this.scrollY(
                 this.cells[range.rowEnd][0].y -
                   this.scrollTop -
-                  this.cells[range.rowEnd][0].height
+                  // this.cells[range.rowEnd][0].height
+                  this.offsetHeight
               );
             } else if (
               this.cells[range.rowEnd][0].y +
@@ -2012,8 +2012,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
             this.scrollX(
               this.cells[this.activeCellPos.row][this.activeCellPos.column].x -
                 this.scrollLeft -
-                this.cells[this.activeCellPos.row][this.activeCellPos.column]
-                  .width
+                this.offsetWidth
             );
           } else if (
             this.cells[this.activeCellPos.row][this.activeCellPos.column].x +
@@ -2067,7 +2066,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
               this.scrollX(
                 this.cells[0][range.columnEnd].x -
                   this.scrollLeft -
-                  this.cells[0][range.columnEnd].width
+                  this.offsetWidth
               );
             } else if (
               this.cells[0][range.columnEnd].x +
@@ -2160,8 +2159,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
             this.scrollX(
               this.cells[this.activeCellPos.row][this.activeCellPos.column].x -
                 this.scrollLeft -
-                this.cells[this.activeCellPos.row][this.activeCellPos.column]
-                  .width
+                this.offsetWidth
             );
           } else if (
             this.cells[this.activeCellPos.row][this.activeCellPos.column].x +
@@ -2278,9 +2276,69 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
           event.shiftKey ? this.activeCellPos.row-- : this.activeCellPos.row++;
         }
       }
-      this.setActive();
-      this.drawScrollBar(this.ctx);
-      this.drawRuler(this.ctx);
+
+      if (!this.isTicking) {
+        requestAnimationFrame(() => {
+          if (
+            this.cells[this.activeCellPos.row][this.activeCellPos.column].x -
+              this.scrollLeft <
+            this.offsetWidth
+          ) {
+            this.scrollX(
+              this.cells[this.activeCellPos.row][this.activeCellPos.column].x -
+                this.scrollLeft -
+                this.offsetWidth,
+              false
+            );
+          } else if (
+            this.cells[this.activeCellPos.row][this.activeCellPos.column].x +
+              this.cells[this.activeCellPos.row][this.activeCellPos.column]
+                .width -
+              this.scrollLeft >
+            this.clientWidth + this.offsetWidth
+          ) {
+            this.scrollX(
+              this.cells[this.activeCellPos.row][this.activeCellPos.column].x -
+                this.scrollLeft -
+                this.clientWidth -
+                this.offsetWidth +
+                this.cells[this.activeCellPos.row][this.activeCellPos.column]
+                  .width,
+              false
+            );
+          }
+          if (
+            this.cells[this.activeCellPos.row][this.activeCellPos.column].y -
+              this.scrollTop <
+            this.offsetHeight
+          ) {
+            this.scrollY(
+              this.cells[this.activeCellPos.row][this.activeCellPos.column].y -
+                this.scrollTop -
+                this.offsetHeight,
+              false
+            );
+          } else if (
+            this.cells[this.activeCellPos.row][this.activeCellPos.column].y +
+              this.cells[this.activeCellPos.row][this.activeCellPos.column]
+                .height -
+              this.scrollTop >
+            this.clientHeight + this.offsetHeight
+          ) {
+            this.scrollY(
+              this.cells[this.activeCellPos.row][this.activeCellPos.column].y -
+                this.scrollTop -
+                this.clientHeight -
+                this.offsetHeight +
+                this.cells[this.activeCellPos.row][this.activeCellPos.column]
+                  .height,
+              false
+            );
+          }
+          this.refreshView();
+          this.isTicking = false;
+        });
+      }
     }
   }
 
