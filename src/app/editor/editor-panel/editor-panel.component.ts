@@ -1684,53 +1684,64 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
         },
       ];
     }
-    if (this.activeCellPos) {
-      this.activeArr.forEach((range, index) => {
-        const [rStart, rEnd, cStart, cEnd] = [
-          range.rowStart,
-          range.rowEnd,
-          range.columnStart,
-          range.columnEnd,
-        ];
-        if (
-          (this.activeCellPos.row === rStart ||
-            this.activeCellPos.row === rEnd) &&
-          (this.activeCellPos.column === cStart ||
-            this.activeCellPos.column === cEnd)
-        ) {
-          if (this.activeCellPos.row !== rStart) {
-            range.rowStart = this.activeCellPos.row;
-            range.rowEnd = rStart;
-          }
-          if (this.activeCellPos.column !== cStart) {
-            range.columnStart = this.activeCellPos.column;
-            range.columnEnd = cStart;
-          }
-          this.activeCellPos.rangeIndex = index;
-        }
-      });
-    } else {
-      let [row, column] = [Infinity, Infinity];
-      this.activeArr.forEach((range) => {
-        const rStart = Math.min(range.rowStart, range.rowEnd);
-        const cStart = Math.min(range.columnStart, range.columnEnd);
-        if (row > rStart) {
-          row = rStart;
-          column = cStart;
-        } else if (row === rStart) {
-          column = cStart < column ? cStart : column;
-        }
-      });
-      this.activeCellPos = {
-        row,
-        column,
-        rangeIndex: this.activeArr.findIndex(
-          (range) =>
-            inRange(row, range.rowStart, range.rowEnd, true) &&
-            inRange(column, range.columnStart, range.columnEnd, true)
-        ),
-      };
-    }
+    this.activeArr.sort((a, b) => {
+      const r = Math.min(a.rowStart, a.rowEnd) - Math.min(b.rowStart, b.rowEnd);
+      if (r) {
+        return r;
+      } else {
+        return (
+          Math.min(a.columnStart, a.columnEnd) -
+          Math.min(b.columnStart, b.columnEnd)
+        );
+      }
+    });
+    // if (this.activeCellPos) {
+    //   this.activeArr.forEach((range, index) => {
+    //     const [rStart, rEnd, cStart, cEnd] = [
+    //       range.rowStart,
+    //       range.rowEnd,
+    //       range.columnStart,
+    //       range.columnEnd,
+    //     ];
+    //     if (
+    //       (this.activeCellPos.row === rStart ||
+    //         this.activeCellPos.row === rEnd) &&
+    //       (this.activeCellPos.column === cStart ||
+    //         this.activeCellPos.column === cEnd)
+    //     ) {
+    //       if (this.activeCellPos.row !== rStart) {
+    //         range.rowStart = this.activeCellPos.row;
+    //         range.rowEnd = rStart;
+    //       }
+    //       if (this.activeCellPos.column !== cStart) {
+    //         range.columnStart = this.activeCellPos.column;
+    //         range.columnEnd = cStart;
+    //       }
+    //       this.activeCellPos.rangeIndex = index;
+    //     }
+    //   });
+    // } else {
+    let [row, column] = [Infinity, Infinity];
+    this.activeArr.forEach((range) => {
+      const rStart = Math.min(range.rowStart, range.rowEnd);
+      const cStart = Math.min(range.columnStart, range.columnEnd);
+      if (row > rStart) {
+        row = rStart;
+        column = cStart;
+      } else if (row === rStart) {
+        column = cStart < column ? cStart : column;
+      }
+    });
+    this.activeCellPos = {
+      row,
+      column,
+      rangeIndex: this.activeArr.findIndex(
+        (range) =>
+          inRange(row, range.rowStart, range.rowEnd, true) &&
+          inRange(column, range.columnStart, range.columnEnd, true)
+      ),
+    };
+    // }
   }
 
   onMouseUp(event: MouseEvent) {
