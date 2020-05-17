@@ -5,9 +5,12 @@ import {
   ViewChild,
   ElementRef,
   AfterViewInit,
+  ɵConsole,
 } from '@angular/core';
 import Cell from './cell.calss';
 import { inRange } from 'src/app/core/decorator/utils/function';
+import { CellRange } from 'src/app/core/model/cell-range.class';
+import { KeyCode } from 'src/app/core/model/key-code.enmu';
 
 @Component({
   selector: 'app-editor-panel',
@@ -50,7 +53,11 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
   clientHeight = 0;
   mousePoint: any;
   autoScrollTimeoutID: any;
-  activeArr: any = [{ rowStart: 1, columnStart: 1, rowEnd: 1, columnEnd: 1 }];
+  activeCellPos: any = { row: 1, column: 1 };
+  activeArr: CellRange[] = [
+    { rowStart: 1, columnStart: 1, rowEnd: 1, columnEnd: 1 },
+  ];
+  unActiveRange: CellRange;
 
   ctx: CanvasRenderingContext2D;
   actionCtx: CanvasRenderingContext2D;
@@ -442,6 +449,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     canvas.width = this.width;
     canvas.height = this.height;
     const ctx = canvas.getContext('2d');
+    ctx.save();
     if (this.activeArr.length > 1) {
       for (let i = 0, len = this.activeArr.length; i < len; i++) {
         const rowStart = Math.max(
@@ -464,19 +472,56 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
         ctx.fillRect(
           this.cells[rowStart][columnStart].x -
             this.scrollLeft +
-            2 * Style.cellBorderWidth,
+            3 * Style.cellBorderWidth,
           this.cells[rowStart][columnStart].y -
             this.scrollTop +
-            2 * Style.cellBorderWidth,
+            3 * Style.cellBorderWidth,
           this.cells[rowEnd][columnEnd].x -
             this.cells[rowStart][columnStart].x +
             this.cells[rowEnd][columnEnd].width -
-            4 * Style.cellBorderWidth,
+            6 * Style.cellBorderWidth,
           this.cells[rowEnd][columnEnd].y -
             this.cells[rowStart][columnStart].y +
             this.cells[rowEnd][columnEnd].height -
-            4 * Style.cellBorderWidth
+            6 * Style.cellBorderWidth
         );
+        if (this.activeCellPos) {
+          ctx.restore();
+          ctx.strokeStyle = Style.activeCellBorderColor;
+          ctx.lineWidth = Style.cellBorderWidth;
+          ctx.clearRect(
+            this.cells[this.activeCellPos.row][this.activeCellPos.column].x -
+              this.scrollLeft,
+            this.cells[this.activeCellPos.row][this.activeCellPos.column].y -
+              this.scrollTop,
+            this.cells[this.activeCellPos.row][this.activeCellPos.column].x -
+              this.cells[this.activeCellPos.row][this.activeCellPos.column].x +
+              this.cells[this.activeCellPos.row][this.activeCellPos.column]
+                .width,
+            this.cells[this.activeCellPos.row][this.activeCellPos.column].y -
+              this.cells[this.activeCellPos.row][this.activeCellPos.column].y +
+              this.cells[this.activeCellPos.row][this.activeCellPos.column]
+                .height
+          );
+          ctx.strokeRect(
+            this.cells[this.activeCellPos.row][this.activeCellPos.column].x -
+              this.scrollLeft +
+              3 * Style.cellBorderWidth,
+            this.cells[this.activeCellPos.row][this.activeCellPos.column].y -
+              this.scrollTop +
+              3 * Style.cellBorderWidth,
+            this.cells[this.activeCellPos.row][this.activeCellPos.column].x -
+              this.cells[this.activeCellPos.row][this.activeCellPos.column].x +
+              this.cells[this.activeCellPos.row][this.activeCellPos.column]
+                .width -
+              6 * Style.cellBorderWidth,
+            this.cells[this.activeCellPos.row][this.activeCellPos.column].y -
+              this.cells[this.activeCellPos.row][this.activeCellPos.column].y +
+              this.cells[this.activeCellPos.row][this.activeCellPos.column]
+                .height -
+              6 * Style.cellBorderWidth
+          );
+        }
       }
     } else {
       const rowStart = Math.max(
@@ -495,6 +540,32 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
         Math.max(this.activeArr[0].columnStart, this.activeArr[0].columnEnd),
         this.viewCells[0][this.viewCells[0].length - 1].position.column
       );
+
+      ctx.fillStyle = Style.selectedCellBackgroundColor;
+      ctx.fillRect(
+        this.cells[rowStart][columnStart].x - this.scrollLeft,
+        this.cells[rowStart][columnStart].y - this.scrollTop,
+        this.cells[rowEnd][columnEnd].x -
+          this.cells[rowStart][columnStart].x +
+          this.cells[rowEnd][columnEnd].width,
+        this.cells[rowEnd][columnEnd].y -
+          this.cells[rowStart][columnStart].y +
+          this.cells[rowEnd][columnEnd].height
+      );
+      if (this.activeCellPos) {
+        ctx.clearRect(
+          this.cells[this.activeCellPos.row][this.activeCellPos.column].x -
+            this.scrollLeft,
+          this.cells[this.activeCellPos.row][this.activeCellPos.column].y -
+            this.scrollTop,
+          this.cells[this.activeCellPos.row][this.activeCellPos.column].x -
+            this.cells[this.activeCellPos.row][this.activeCellPos.column].x +
+            this.cells[this.activeCellPos.row][this.activeCellPos.column].width,
+          this.cells[this.activeCellPos.row][this.activeCellPos.column].y -
+            this.cells[this.activeCellPos.row][this.activeCellPos.column].y +
+            this.cells[this.activeCellPos.row][this.activeCellPos.column].height
+        );
+      }
       ctx.strokeStyle = Style.activeCellBorderColor;
       ctx.shadowColor = Style.activeCellShadowColor;
       ctx.shadowBlur = Style.activeCellShadowBlur;
@@ -508,8 +579,29 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
           this.cells[rowStart][columnStart].y +
           this.cells[rowEnd][columnEnd].height
       );
-      ctx.fillStyle = Style.selectedCellBackgroundColor;
-      ctx.fillRect(
+    }
+    if (this.unActiveRange) {
+      ctx.restore();
+      const rowStart = Math.max(
+        Math.min(this.unActiveRange.rowEnd, this.unActiveRange.rowStart),
+        this.viewCells[1][0].position.row
+      );
+      const rowEnd = Math.min(
+        Math.max(this.unActiveRange.rowEnd, this.unActiveRange.rowStart),
+        this.viewCells[this.viewCells.length - 1][0].position.row
+      );
+      const columnStart = Math.max(
+        Math.min(this.unActiveRange.columnStart, this.unActiveRange.columnEnd),
+        this.viewCells[0][1].position.column
+      );
+      const columnEnd = Math.min(
+        Math.max(this.unActiveRange.columnStart, this.unActiveRange.columnEnd),
+        this.viewCells[0][this.viewCells[0].length - 1].position.column
+      );
+      ctx.strokeStyle = Style.cellBorderColor;
+      ctx.lineWidth = 3 * Style.cellBorderWidth;
+      ctx.fillStyle = Style.unSelectedCellBackgroundColor;
+      ctx.rect(
         this.cells[rowStart][columnStart].x - this.scrollLeft,
         this.cells[rowStart][columnStart].y - this.scrollTop,
         this.cells[rowEnd][columnEnd].x -
@@ -519,6 +611,8 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
           this.cells[rowStart][columnStart].y +
           this.cells[rowEnd][columnEnd].height
       );
+      ctx.fill();
+      ctx.stroke();
     }
     this.actionCtx.drawImage(
       canvas,
@@ -706,10 +800,11 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
   }
 
   onMouseOver(event: MouseEvent) {
-    console.log('mouseover', event);
+    // console.log('mouseover', event);
   }
 
   onMouseOut(event: MouseEvent) {
+    // console.log('mouseout', event);
     this.state.isSelectCell = false;
     this.state.isScrollXThumbHover = false;
     this.state.isScrollYThumbHover = false;
@@ -719,22 +814,52 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     this.state.isSelectRulerY = false;
     this.drawScrollBar(this.ctx);
     this.mousePoint = null;
-    console.log('mouseout', event);
+    if (
+      this.state.unSelectCell ||
+      this.state.unSelectRulerX ||
+      this.state.unSelectRulerY
+    ) {
+      this.reCalcActiveArr();
+      this.unActiveRange = null;
+      this.state.unSelectCell = false;
+      this.state.unSelectRulerX = false;
+      this.state.unSelectRulerY = false;
+      this.setActive();
+      this.drawScrollBar(this.ctx);
+      this.drawRuler(this.ctx);
+    }
   }
 
   onMouseEnter(event) {
-    console.log('mouseenter', event);
+    // console.log('mouseenter', event);
   }
 
   onMouseLeave(event) {
-    console.log('mouseleave', event);
+    // console.log('mouseleave', event);
   }
 
   onContextMenu(event: MouseEvent) {
     event.returnValue = false;
   }
 
-  inCellArea(x: number, y: number) {
+  inCellArea(x: number, y: number, cell: Cell) {
+    return (
+      inRange(
+        x,
+        cell.x - this.scrollLeft,
+        cell.x - this.scrollLeft + cell.width,
+        true
+      ) &&
+      inRange(
+        y,
+        cell.y - this.scrollTop,
+        cell.y - this.scrollTop + cell.height,
+        true
+      )
+    );
+  }
+
+  inCellsArea(x: number, y: number) {
     return (
       inRange(x, this.offsetWidth, this.offsetWidth + this.clientWidth, true) &&
       inRange(y, this.offsetHeight, this.offsetHeight + this.clientHeight, true)
@@ -829,6 +954,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
   }
 
   onMouseDown(event: MouseEvent) {
+    this.panel.nativeElement.focus();
     if (event.button === 2) {
       event.returnValue = false;
       return;
@@ -844,36 +970,76 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
           columnEnd: Infinity,
         },
       ];
+      this.activeCellPos = { row: 1, column: 1, rangeIndex: 0 };
       this.setActive();
       this.drawRuler(this.ctx);
       // this.drawScrollBar(ctx);
     } else if (this.inRulerXArea(event.clientX, event.clientY)) {
       console.log('rulerx');
-      this.state.isSelectRulerX = true;
-      const canvas = document.createElement('canvas');
-      canvas.width = this.width;
-      canvas.height = this.height;
-      const ctx = canvas.getContext('2d');
+
+      // const canvas = document.createElement('canvas');
+      // canvas.width = this.width;
+      // canvas.height = this.height;
+      // const ctx = canvas.getContext('2d');
       for (let i = 1, len = this.viewCells[0].length; i < len; i++) {
-        ctx.clearRect(0, 0, this.width, this.height);
-        ctx.rect(
-          this.viewCells[0][i].x - this.scrollLeft,
-          this.viewCells[0][i].y,
-          this.viewCells[0][i].width,
-          this.viewCells[0][i].height
-        );
-        if (ctx.isPointInPath(event.clientX, event.clientY)) {
-          this.activeArr.push({
-            rowStart: 1,
-            rowEnd: Infinity,
-            columnStart: event.shiftKey
-              ? this.activeArr.length &&
-                this.activeArr[this.activeArr.length - 1].columnStart
-              : this.viewCells[0][i].position.column,
-            columnEnd: this.viewCells[0][i].position.column,
-          });
-          if (!event.ctrlKey) {
+        // ctx.clearRect(0, 0, this.width, this.height);
+        // ctx.rect(
+        //   this.viewCells[0][i].x - this.scrollLeft,
+        //   this.viewCells[0][i].y,
+        //   this.viewCells[0][i].width,
+        //   this.viewCells[0][i].height
+        // );
+        // if (ctx.isPointInPath(event.clientX, event.clientY)) {
+        if (
+          inRange(
+            event.x,
+            this.viewCells[0][i].x - this.scrollLeft,
+            this.viewCells[0][i].x -
+              this.scrollLeft +
+              this.viewCells[0][i].width,
+            true
+          )
+        ) {
+          const isUnActive =
+            this.activeArr.some(
+              (range) =>
+                range.rowStart === 1 &&
+                range.rowEnd === Infinity &&
+                inRange(
+                  this.viewCells[0][i].position.column,
+                  range.columnStart,
+                  range.columnEnd,
+                  true
+                )
+            ) && event.ctrlKey;
+          if (isUnActive) {
+            this.state.unSelectRulerX = true;
+            this.unActiveRange = {
+              rowStart: 1,
+              rowEnd: Infinity,
+              columnStart: this.viewCells[0][i].position.column,
+              columnEnd: this.viewCells[0][i].position.column,
+            };
+          } else {
+            this.state.isSelectRulerX = true;
+            this.activeArr.push({
+              rowStart: 1,
+              rowEnd: Infinity,
+              columnStart: event.shiftKey
+                ? this.activeArr.length &&
+                  this.activeArr[this.activeArr.length - 1].columnStart
+                : this.viewCells[0][i].position.column,
+              columnEnd: this.viewCells[0][i].position.column,
+            });
+            this.activeCellPos = {
+              row: this.activeArr[this.activeArr.length - 1].rowStart,
+              column: this.activeArr[this.activeArr.length - 1].columnStart,
+              rangeIndex: this.activeArr.length - 1,
+            };
+          }
+          if (!event.ctrlKey || event.shiftKey) {
             this.activeArr = [this.activeArr[this.activeArr.length - 1]];
+            this.activeCellPos.rangeIndex = 0;
           }
           this.setActive();
           this.drawRuler(this.ctx);
@@ -881,33 +1047,69 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
         }
       }
     } else if (this.inRulerYArea(event.clientX, event.clientY)) {
-      this.state.isSelectRulerY = true;
       console.log('rulery');
-      const canvas = document.createElement('canvas');
-      canvas.width = this.width;
-      canvas.height = this.height;
-      const ctx = canvas.getContext('2d');
+      // const canvas = document.createElement('canvas');
+      // canvas.width = this.width;
+      // canvas.height = this.height;
+      // const ctx = canvas.getContext('2d');
       const rowCells = this.viewCells.map((row) => row[0]);
       for (let i = 1, len = rowCells.length; i < len; i++) {
-        ctx.clearRect(0, 0, this.width, this.height);
-        ctx.rect(
-          rowCells[i].x,
-          rowCells[i].y - this.scrollTop,
-          rowCells[i].width,
-          rowCells[i].height
-        );
-        if (ctx.isPointInPath(event.clientX, event.clientY)) {
-          this.activeArr.push({
-            rowStart: event.shiftKey
-              ? this.activeArr.length &&
-                this.activeArr[this.activeArr.length - 1].rowStart
-              : rowCells[i].position.row,
-            rowEnd: rowCells[i].position.row,
-            columnStart: 1,
-            columnEnd: Infinity,
-          });
-          if (!event.ctrlKey) {
+        // ctx.clearRect(0, 0, this.width, this.height);
+        // ctx.rect(
+        //   rowCells[i].x,
+        //   rowCells[i].y - this.scrollTop,
+        //   rowCells[i].width,
+        //   rowCells[i].height
+        // );
+        // if (ctx.isPointInPath(event.clientX, event.clientY)) {
+        if (
+          inRange(
+            event.clientY,
+            rowCells[i].y - this.scrollTop,
+            rowCells[i].y - this.scrollTop + rowCells[i].height,
+            true
+          )
+        ) {
+          const isUnActive =
+            this.activeArr.some(
+              (range) =>
+                range.columnStart === 1 &&
+                range.columnEnd === Infinity &&
+                inRange(
+                  rowCells[i].position.row,
+                  range.rowStart,
+                  range.rowEnd,
+                  true
+                )
+            ) && event.ctrlKey;
+          if (isUnActive) {
+            this.state.unSelectRulerY = true;
+            this.unActiveRange = {
+              rowStart: rowCells[i].position.row,
+              rowEnd: rowCells[i].position.row,
+              columnStart: 1,
+              columnEnd: Infinity,
+            };
+          } else {
+            this.state.isSelectRulerY = true;
+            this.activeArr.push({
+              rowStart: event.shiftKey
+                ? this.activeArr.length &&
+                  this.activeArr[this.activeArr.length - 1].rowStart
+                : rowCells[i].position.row,
+              rowEnd: rowCells[i].position.row,
+              columnStart: 1,
+              columnEnd: Infinity,
+            });
+            this.activeCellPos = {
+              row: this.activeArr[this.activeArr.length - 1].rowStart,
+              column: this.activeArr[this.activeArr.length - 1].columnStart,
+              rangeIndex: this.activeArr.length - 1,
+            };
+          }
+          if (!event.ctrlKey || event.shiftKey) {
             this.activeArr = [this.activeArr[this.activeArr.length - 1]];
+            this.activeCellPos.rangeIndex = 0;
           }
           this.setActive();
           this.drawRuler(this.ctx);
@@ -952,42 +1154,74 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
         this.setActive();
         this.drawRuler(this.ctx);
       }
-    } else if (this.inCellArea(event.clientX, event.clientY)) {
-      const canvas = document.createElement('canvas');
-      canvas.width = this.width;
-      canvas.height = this.height;
-      const ctx = canvas.getContext('2d');
+    } else if (this.inCellsArea(event.clientX, event.clientY)) {
+      // const canvas = document.createElement('canvas');
+      // canvas.width = this.width;
+      // canvas.height = this.height;
+      // const ctx = canvas.getContext('2d');
       for (let rLen = this.viewCells.length, i = rLen - 1; i > 0; i--) {
         for (let cLen = this.viewCells[i].length, j = cLen - 1; j > 0; j--) {
           const cell = this.viewCells[i][j];
-          ctx.clearRect(0, 0, this.width, this.height);
-          ctx.rect(
-            cell.x - this.scrollLeft,
-            cell.y - this.scrollTop,
-            cell.width,
-            cell.height
-          );
-          if (ctx.isPointInPath(event.clientX, event.clientY)) {
-            this.activeArr.push({
-              rowStart:
-                (event.shiftKey &&
-                  this.activeArr.length &&
-                  this.activeArr[this.activeArr.length - 1].rowStart) ||
-                cell.position.row,
-              columnStart:
-                (event.shiftKey &&
-                  this.activeArr.length &&
-                  this.activeArr[this.activeArr.length - 1].columnStart) ||
-                cell.position.column,
-              rowEnd: cell.position.row,
-              columnEnd: cell.position.column,
-            });
-            console.log(this.activeArr);
-            if (!event.ctrlKey) {
-              this.activeArr = [this.activeArr[this.activeArr.length - 1]];
+          // ctx.clearRect(0, 0, this.width, this.height);
+          // ctx.rect(
+          //   cell.x - this.scrollLeft,
+          //   cell.y - this.scrollTop,
+          //   cell.width,
+          //   cell.height
+          // );
+          // if (ctx.isPointInPath(event.clientX, event.clientY)) {
+          if (this.inCellArea(event.clientX, event.clientY, cell)) {
+            const isUnActive =
+              this.activeArr.some(
+                (range) =>
+                  inRange(
+                    cell.position.row,
+                    range.rowStart,
+                    range.rowEnd,
+                    true
+                  ) &&
+                  inRange(
+                    cell.position.column,
+                    range.columnStart,
+                    range.columnEnd,
+                    true
+                  )
+              ) && event.ctrlKey;
+            if (isUnActive) {
+              this.state.unSelectCell = true;
+              this.unActiveRange = {
+                rowStart: cell.position.row,
+                rowEnd: cell.position.row,
+                columnStart: cell.position.column,
+                columnEnd: cell.position.column,
+              };
+            } else {
+              this.state.isSelectCell = true;
+              this.activeArr.push({
+                rowStart:
+                  (event.shiftKey &&
+                    this.activeArr.length &&
+                    this.activeArr[this.activeArr.length - 1].rowStart) ||
+                  cell.position.row,
+                columnStart:
+                  (event.shiftKey &&
+                    this.activeArr.length &&
+                    this.activeArr[this.activeArr.length - 1].columnStart) ||
+                  cell.position.column,
+                rowEnd: cell.position.row,
+                columnEnd: cell.position.column,
+              });
+              this.activeCellPos = {
+                row: this.activeArr[this.activeArr.length - 1].rowStart,
+                column: this.activeArr[this.activeArr.length - 1].columnStart,
+                rangeIndex: this.activeArr.length - 1,
+              };
+              if (!event.ctrlKey || event.shiftKey) {
+                this.activeArr = [this.activeArr[this.activeArr.length - 1]];
+                this.activeCellPos.rangeIndex = 0;
+              }
             }
 
-            this.state.isSelectCell = true;
             this.autoScroll(this.mousePoint.x, this.mousePoint.y);
             this.setActive();
             this.drawRuler(this.ctx);
@@ -1001,7 +1235,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
   // @throttle(20)
   onMouseMove(event: MouseEvent) {
     if (
-      (!this.inCellArea(event.clientX, event.clientY) &&
+      (!this.inCellsArea(event.clientX, event.clientY) &&
         !this.state.isSelectCell) ||
       this.state.isSelectScrollYThumb ||
       this.state.isSelectScrollXThumb
@@ -1034,6 +1268,8 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
         let range;
         if (this.state.isSelectCell) {
           range = this.calcActive(event.clientX, event.clientY);
+        } else if (this.state.unSelectCell) {
+          range = this.calcUnActive(event.clientX, event.clientY);
         } else if (this.state.isSelectScrollYThumb) {
           this.calcScrollY(event.clientX, event.clientY);
         } else if (this.state.isSelectScrollXThumb) {
@@ -1041,12 +1277,23 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
         } else if (this.state.isSelectRulerX) {
           range = this.calcAcitiveRulerX(event.clientX, event.clientY);
         } else if (this.state.isSelectRulerY) {
-          range = this.calcAcitiveRulerY(event.clientX, event.clientY);
+          range = this.calcActiveRulerY(event.clientX, event.clientY);
+        } else if (this.state.unSelectRulerX) {
+          range = this.calcUnActiveRulerX(event.clientX, event.clientY);
+        } else if (this.state.unSelectRulerY) {
+          range = this.calcUnActiveRulerY(event.clientX, event.clientY);
         }
-
         if (range) {
-          this.activeArr.push(range);
-          this.activeArr.splice(this.activeArr.length - 2, 1);
+          if (
+            !this.state.unSelectCell &&
+            !this.state.unSelectRulerX &&
+            !this.state.unSelectRulerY
+          ) {
+            this.activeArr.push(range);
+            this.activeArr.splice(this.activeArr.length - 2, 1);
+          } else if (range) {
+            this.unActiveRange = range;
+          }
           this.setActive();
           this.drawRuler(this.ctx);
         }
@@ -1146,14 +1393,29 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     // }
   }
 
-  calcAcitiveRulerY(x: number, y: number) {
+  calcUnActiveRulerX(x: number, y: number) {
+    for (let i = 1, len = this.viewCells[0].length; i < len; i++) {
+      const cx = this.viewCells[0][i].x - this.scrollLeft;
+      const cw = this.viewCells[0][i].width;
+      if (inRange(x, cx, cx + cw, true)) {
+        return {
+          rowStart: 1,
+          rowEnd: Infinity,
+          columnStart: this.unActiveRange.columnStart,
+          columnEnd: this.viewCells[0][i].position.column,
+        };
+      }
+    }
+  }
+
+  calcActiveRulerY(x: number, y: number) {
     const rowCells = this.viewCells.map((row) => row[0]);
     for (let i = 1, len = rowCells.length; i < len; i++) {
       const cy = rowCells[i].y - this.scrollTop;
       const ch = rowCells[i].height;
       if (inRange(y, cy, cy + ch, true)) {
         return {
-          rowStart: this.activeArr[this.activeArr.length].rowStart,
+          rowStart: this.activeArr[this.activeArr.length - 1].rowStart,
           rowEnd: rowCells[i].position.row,
           columnStart: 1,
           columnEnd: Infinity,
@@ -1185,6 +1447,22 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     // }
   }
 
+  calcUnActiveRulerY(x: number, y: number) {
+    const rowCells = this.viewCells.map((row) => row[0]);
+    for (let i = 1, len = rowCells.length; i < len; i++) {
+      const cy = rowCells[i].y - this.scrollTop;
+      const ch = rowCells[i].height;
+      if (inRange(y, cy, cy + ch, true)) {
+        return {
+          rowStart: this.unActiveRange.rowStart,
+          rowEnd: rowCells[i].position.row,
+          columnStart: 1,
+          columnEnd: Infinity,
+        };
+      }
+    }
+  }
+
   calcScrollX(x: number, y: number) {
     let scrollXThumbHeight =
       (this.clientWidth / this.scrollWidth) * this.clientWidth;
@@ -1210,21 +1488,22 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
   }
 
   calcActive(x: number, y: number) {
-    const canvas = document.createElement('canvas');
-    canvas.width = this.width;
-    canvas.height = this.height;
-    const ctx = canvas.getContext('2d');
+    // const canvas = document.createElement('canvas');
+    // canvas.width = this.width;
+    // canvas.height = this.height;
+    // const ctx = canvas.getContext('2d');
     for (let rLen = this.viewCells.length, i = rLen - 1; i > 0; i--) {
       for (let cLen = this.viewCells[i].length, j = cLen - 1; j > 0; j--) {
         const cell = this.viewCells[i][j];
-        ctx.clearRect(0, 0, this.width, this.height);
-        ctx.rect(
-          cell.x - this.scrollLeft,
-          cell.y - this.scrollTop,
-          cell.width,
-          cell.height
-        );
-        if (ctx.isPointInPath(x, y)) {
+        // ctx.clearRect(0, 0, this.width, this.height);
+        // ctx.rect(
+        //   cell.x - this.scrollLeft,
+        //   cell.y - this.scrollTop,
+        //   cell.width,
+        //   cell.height
+        // );
+        // if (ctx.isPointInPath(x, y)) {
+        if (this.inCellArea(x, y, cell)) {
           return {
             rowStart: this.activeArr[this.activeArr.length - 1].rowStart,
             columnStart: this.activeArr[this.activeArr.length - 1].columnStart,
@@ -1236,6 +1515,224 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     }
   }
 
+  calcUnActive(x: number, y: number) {
+    for (let rLen = this.viewCells.length, i = rLen - 1; i > 0; i--) {
+      for (let cLen = this.viewCells[i].length, j = cLen - 1; j > 0; j--) {
+        const cell = this.viewCells[i][j];
+        if (this.inCellArea(x, y, cell)) {
+          return {
+            rowStart: this.unActiveRange.rowStart,
+            columnStart: this.unActiveRange.columnStart,
+            rowEnd: cell.position.row,
+            columnEnd: cell.position.column,
+          };
+        }
+      }
+    }
+  }
+
+  reCalcActiveArr() {
+    const [rowStart, rowEnd, columnStart, columnEnd] = [
+      Math.min(this.unActiveRange.rowStart, this.unActiveRange.rowEnd),
+      Math.max(this.unActiveRange.rowStart, this.unActiveRange.rowEnd),
+      Math.min(this.unActiveRange.columnStart, this.unActiveRange.columnEnd),
+      Math.max(this.unActiveRange.columnStart, this.unActiveRange.columnEnd),
+    ];
+    const arr = this.activeArr.map((activeRange) => {
+      const temp: CellRange[] = [];
+      if (
+        (inRange(rowStart, activeRange.rowStart, activeRange.rowEnd, true) ||
+          inRange(rowEnd, activeRange.rowStart, activeRange.rowEnd, true) ||
+          (rowStart <= Math.min(activeRange.rowStart, activeRange.rowEnd) &&
+            rowEnd >= Math.max(activeRange.rowStart, activeRange.rowEnd))) &&
+        (inRange(
+          columnStart,
+          activeRange.columnStart,
+          activeRange.columnEnd,
+          true
+        ) ||
+          inRange(
+            columnEnd,
+            activeRange.columnStart,
+            activeRange.columnEnd,
+            true
+          ) ||
+          (columnStart <=
+            Math.min(activeRange.columnStart, activeRange.columnEnd) &&
+            columnEnd >=
+              Math.max(activeRange.columnStart, activeRange.columnEnd)))
+      ) {
+        if (
+          inRange(
+            columnStart,
+            activeRange.columnStart,
+            activeRange.columnEnd
+          ) ||
+          (columnStart >
+            Math.min(activeRange.columnStart, activeRange.columnEnd) &&
+            columnStart ===
+              Math.max(activeRange.columnStart, activeRange.columnEnd))
+        ) {
+          temp.push({
+            rowStart: inRange(
+              rowStart,
+              activeRange.rowStart,
+              activeRange.rowEnd,
+              true
+            )
+              ? rowStart
+              : Math.min(activeRange.rowStart, activeRange.rowEnd),
+            rowEnd: inRange(
+              rowEnd,
+              activeRange.rowStart,
+              activeRange.rowEnd,
+              true
+            )
+              ? rowEnd
+              : Math.max(activeRange.rowStart, activeRange.rowEnd),
+            columnStart: Math.min(
+              activeRange.columnStart,
+              activeRange.columnEnd
+            ),
+            columnEnd: columnStart - 1,
+          });
+        }
+
+        if (
+          inRange(columnEnd, activeRange.columnStart, activeRange.columnEnd) ||
+          (columnEnd <
+            Math.max(activeRange.columnStart, activeRange.columnEnd) &&
+            columnEnd ===
+              Math.min(activeRange.columnStart, activeRange.columnEnd))
+        ) {
+          temp.push({
+            rowStart: inRange(
+              rowStart,
+              activeRange.rowStart,
+              activeRange.rowEnd,
+              true
+            )
+              ? rowStart
+              : Math.min(activeRange.rowStart, activeRange.rowEnd),
+            rowEnd: inRange(
+              rowEnd,
+              activeRange.rowStart,
+              activeRange.rowEnd,
+              true
+            )
+              ? rowEnd
+              : Math.max(activeRange.rowStart, activeRange.rowEnd),
+            columnStart: Math.min(
+              columnEnd + 1,
+              Math.max(activeRange.columnStart, activeRange.columnEnd)
+            ),
+            columnEnd: Math.max(activeRange.columnStart, activeRange.columnEnd),
+          });
+        }
+        if (
+          inRange(rowStart, activeRange.rowStart, activeRange.rowEnd) ||
+          (rowStart > Math.min(activeRange.rowStart, activeRange.rowEnd) &&
+            rowStart === Math.max(activeRange.rowStart, activeRange.rowEnd))
+        ) {
+          temp.push({
+            rowStart:
+              activeRange.rowStart <= activeRange.rowEnd
+                ? activeRange.rowStart
+                : activeRange.rowEnd,
+            rowEnd: rowStart - 1,
+            columnStart: activeRange.columnStart,
+            columnEnd: activeRange.columnEnd,
+          });
+        }
+        if (
+          inRange(rowEnd, activeRange.rowStart, activeRange.rowEnd) ||
+          (rowEnd < Math.max(activeRange.rowStart, activeRange.rowEnd) &&
+            rowEnd === Math.min(activeRange.rowStart, activeRange.rowEnd))
+        ) {
+          temp.push({
+            rowStart: rowEnd + 1,
+            rowEnd:
+              activeRange.rowStart <= activeRange.rowEnd
+                ? activeRange.rowEnd
+                : activeRange.rowStart,
+            columnStart: activeRange.columnStart,
+            columnEnd: activeRange.columnEnd,
+          });
+        }
+
+        if (
+          this.activeCellPos &&
+          inRange(this.activeCellPos.row, rowStart, rowEnd, true) &&
+          inRange(this.activeCellPos.column, columnStart, columnEnd, true)
+        ) {
+          this.activeCellPos = null;
+        }
+        return temp;
+      } else {
+        return [activeRange];
+      }
+    });
+
+    this.activeArr = arr.reduce((acc, val) => acc.concat(val), []);
+    if (!this.activeArr.length) {
+      this.activeArr = [
+        {
+          rowStart: this.unActiveRange.rowStart,
+          rowEnd: this.unActiveRange.rowStart,
+          columnStart: this.unActiveRange.columnStart,
+          columnEnd: this.unActiveRange.columnStart,
+        },
+      ];
+    }
+    if (this.activeCellPos) {
+      this.activeArr.forEach((range, index) => {
+        const [rStart, rEnd, cStart, cEnd] = [
+          range.rowStart,
+          range.rowEnd,
+          range.columnStart,
+          range.columnEnd,
+        ];
+        if (
+          (this.activeCellPos.row === rStart ||
+            this.activeCellPos.row === rEnd) &&
+          (this.activeCellPos.column === cStart ||
+            this.activeCellPos.column === cEnd)
+        ) {
+          if (this.activeCellPos.row !== rStart) {
+            range.rowStart = this.activeCellPos.row;
+            range.rowEnd = rStart;
+          }
+          if (this.activeCellPos.column !== cStart) {
+            range.columnStart = this.activeCellPos.column;
+            range.columnEnd = cStart;
+          }
+          this.activeCellPos.rangeIndex = index;
+        }
+      });
+    } else {
+      let [row, column] = [Infinity, Infinity];
+      this.activeArr.forEach((range) => {
+        const rStart = Math.min(range.rowStart, range.rowEnd);
+        const cStart = Math.min(range.columnStart, range.columnEnd);
+        if (row > rStart) {
+          row = rStart;
+          column = cStart;
+        } else if (row === rStart) {
+          column = cStart < column ? cStart : column;
+        }
+      });
+      this.activeCellPos = {
+        row,
+        column,
+        rangeIndex: this.activeArr.findIndex(
+          (range) =>
+            inRange(row, range.rowStart, range.rowEnd, true) &&
+            inRange(column, range.columnStart, range.columnEnd, true)
+        ),
+      };
+    }
+  }
+
   onMouseUp(event: MouseEvent) {
     this.state.isSelectCell = false;
     this.state.isSelectScrollYThumb = false;
@@ -1243,6 +1740,20 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     this.state.isSelectRulerX = false;
     this.state.isSelectRulerY = false;
     this.mousePoint = null;
+    if (
+      this.state.unSelectCell ||
+      this.state.unSelectRulerX ||
+      this.state.unSelectRulerY
+    ) {
+      this.reCalcActiveArr();
+      this.unActiveRange = null;
+      this.state.unSelectCell = false;
+      this.state.unSelectRulerX = false;
+      this.state.unSelectRulerY = false;
+      this.setActive();
+      this.drawScrollBar(this.ctx);
+      this.drawRuler(this.ctx);
+    }
   }
 
   scrollX(deltaX: number) {
@@ -1252,7 +1763,12 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     this.scrollLeft += deltaX;
     if (this.scrollLeft >= this.scrollWidth - this.clientWidth) {
       for (
-        let i = 0, len = Math.ceil(deltaX / Style.cellWidth) + 1;
+        let i = 0,
+          len =
+            Math.ceil(
+              (this.scrollLeft - this.scrollWidth + this.clientWidth) /
+                Style.cellWidth
+            ) + 1;
         i < len;
         i++
       ) {
@@ -1281,7 +1797,12 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     this.scrollTop += deltaY;
     if (this.scrollTop >= this.scrollHeight - this.clientHeight) {
       for (
-        let i = 0, len = Math.ceil(deltaY / Style.cellHeight) + 1;
+        let i = 0,
+          len =
+            Math.ceil(
+              (this.scrollTop - this.scrollHeight + this.clientHeight) /
+                Style.cellHeight
+            ) + 1;
         i < len;
         i++
       ) {
@@ -1304,7 +1825,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
   }
 
   onWheel(event: WheelEvent) {
-    console.log('wheel', event);
+    // console.log('wheel', event);
     if (!this.isTicking) {
       requestAnimationFrame(() => {
         this.scrollY(event.deltaY);
@@ -1315,7 +1836,459 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     this.isTicking = true;
   }
 
+  onKeyArrowUpOrDown(event: KeyboardEvent) {
+    if (!event.shiftKey) {
+      if (event.keyCode === KeyCode.ArrowDown) {
+        this.activeCellPos = {
+          row:
+            this.activeCellPos.row + 1 > this.cells.length - 1 || event.ctrlKey
+              ? this.cells.length - 1
+              : this.activeCellPos.row + 1,
+          column: this.activeCellPos.column,
+          rangeIndex: 0,
+        };
+      } else if (event.keyCode === KeyCode.ArrowUp) {
+        this.activeCellPos = {
+          row:
+            this.activeCellPos.row - 1 < 1 || event.ctrlKey
+              ? 1
+              : this.activeCellPos.row - 1,
+          column: this.activeCellPos.column,
+          rangeIndex: 0,
+        };
+      }
+      this.activeArr = [
+        {
+          rowStart: this.activeCellPos.row,
+          rowEnd: this.activeCellPos.row,
+          columnStart: this.activeCellPos.column,
+          columnEnd: this.activeCellPos.column,
+        },
+      ];
+      if (!this.isTicking) {
+        requestAnimationFrame(() => {
+          if (
+            this.cells[this.activeCellPos.row][this.activeCellPos.column].y -
+              this.scrollTop <
+            this.offsetHeight
+          ) {
+            this.scrollY(
+              this.cells[this.activeCellPos.row][this.activeCellPos.column].y -
+                this.scrollTop -
+                this.cells[this.activeCellPos.row][this.activeCellPos.column]
+                  .height
+            );
+          } else if (
+            this.cells[this.activeCellPos.row][this.activeCellPos.column].y +
+              this.cells[this.activeCellPos.row][this.activeCellPos.column]
+                .height -
+              this.scrollTop >
+            this.clientHeight + this.offsetHeight
+          ) {
+            this.scrollY(
+              this.cells[this.activeCellPos.row][this.activeCellPos.column].y -
+                this.scrollTop -
+                this.clientHeight -
+                this.offsetHeight +
+                this.cells[this.activeCellPos.row][this.activeCellPos.column]
+                  .height
+            );
+          } else {
+            this.refreshView();
+          }
+          this.isTicking = false;
+        });
+      }
+    } else {
+      // let range;
+      // for (let i = this.activeArr.length - 1; i >= 0; i--) {
+      //   if (
+      //     this.activeArr[i].rowStart === this.activeCellPos.row &&
+      //     this.activeArr[i].columnStart === this.activeCellPos.column
+      //   ) {
+      //     range = this.activeArr[i];
+      //     break;
+      //   }
+      // }
+      const range = this.activeArr[this.activeCellPos.rangeIndex];
+      if (range) {
+        if (event.keyCode === KeyCode.ArrowDown) {
+          range.rowEnd =
+            range.rowEnd + 1 >
+              this.cells[this.cells.length - 1][0].position.row || event.ctrlKey
+              ? this.cells[this.cells.length - 1][0].position.row
+              : range.rowEnd + 1;
+        } else if (event.keyCode === KeyCode.ArrowUp) {
+          range.rowEnd =
+            range.rowEnd - 1 < 1 || event.ctrlKey ? 1 : range.rowEnd - 1;
+        }
+        if (!this.isTicking) {
+          requestAnimationFrame(() => {
+            if (
+              this.cells[range.rowEnd][0].y - this.scrollTop <
+              this.offsetHeight
+            ) {
+              this.scrollY(
+                this.cells[range.rowEnd][0].y -
+                  this.scrollTop -
+                  this.cells[range.rowEnd][0].height
+              );
+            } else if (
+              this.cells[range.rowEnd][0].y +
+                this.cells[range.rowEnd][0].height -
+                this.scrollTop >=
+              this.clientHeight + this.offsetHeight
+            ) {
+              this.scrollY(
+                this.cells[range.rowEnd][0].y -
+                  this.scrollTop -
+                  this.clientHeight -
+                  this.offsetHeight +
+                  this.cells[range.rowEnd][0].height
+              );
+            } else {
+              this.refreshView();
+            }
+            this.isTicking = false;
+          });
+        }
+        this.isTicking = true;
+      }
+    }
+  }
+
+  onKeyArrowLeftOrRight(event: KeyboardEvent) {
+    if (!event.shiftKey) {
+      if (event.keyCode === KeyCode.ArrowRight) {
+        this.activeCellPos = {
+          row: this.activeCellPos.row,
+          column:
+            this.activeCellPos.column + 1 > this.cells[0].length - 1 ||
+            event.ctrlKey
+              ? this.cells[0].length - 1
+              : this.activeCellPos.column + 1,
+          rangeIndex: 0,
+        };
+      } else if (event.keyCode === KeyCode.ArrowLeft) {
+        this.activeCellPos = {
+          row: this.activeCellPos.row,
+          column:
+            this.activeCellPos.column - 1 < 1 || event.ctrlKey
+              ? 1
+              : this.activeCellPos.column - 1,
+          rangeIndex: 0,
+        };
+      }
+      this.activeArr = [
+        {
+          rowStart: this.activeCellPos.row,
+          rowEnd: this.activeCellPos.row,
+          columnStart: this.activeCellPos.column,
+          columnEnd: this.activeCellPos.column,
+        },
+      ];
+      if (!this.isTicking) {
+        requestAnimationFrame(() => {
+          if (
+            this.cells[this.activeCellPos.row][this.activeCellPos.column].x -
+              this.scrollLeft <
+            this.offsetWidth
+          ) {
+            this.scrollX(
+              this.cells[this.activeCellPos.row][this.activeCellPos.column].x -
+                this.scrollLeft -
+                this.cells[this.activeCellPos.row][this.activeCellPos.column]
+                  .width
+            );
+          } else if (
+            this.cells[this.activeCellPos.row][this.activeCellPos.column].x +
+              this.cells[this.activeCellPos.row][this.activeCellPos.column]
+                .width -
+              this.scrollLeft >
+            this.clientWidth + this.offsetWidth
+          ) {
+            this.scrollX(
+              this.cells[this.activeCellPos.row][this.activeCellPos.column].x -
+                this.scrollLeft -
+                this.clientWidth -
+                this.offsetWidth +
+                this.cells[this.activeCellPos.row][this.activeCellPos.column]
+                  .width
+            );
+          } else {
+            this.refreshView();
+          }
+          this.isTicking = false;
+        });
+      }
+    } else {
+      // let range;
+      // for (let i = this.activeArr.length - 1; i >= 0; i--) {
+      //   if (
+      //     this.activeArr[i].rowStart === this.activeCellPos.row &&
+      //     this.activeArr[i].columnStart === this.activeCellPos.column
+      //   ) {
+      //     range = this.activeArr[i];
+      //     break;
+      //   }
+      // }
+      const range = this.activeArr[this.activeCellPos.rangeIndex];
+      if (range) {
+        if (event.keyCode === KeyCode.ArrowRight) {
+          range.columnEnd =
+            range.columnEnd + 1 > this.cells[0].length - 1 || event.ctrlKey
+              ? this.cells[0].length - 1
+              : range.columnEnd + 1;
+        } else if (event.keyCode === KeyCode.ArrowLeft) {
+          range.columnEnd =
+            range.columnEnd - 1 < 1 || event.ctrlKey ? 1 : range.columnEnd - 1;
+        }
+        if (!this.isTicking) {
+          requestAnimationFrame(() => {
+            if (
+              this.cells[0][range.columnEnd].x - this.scrollLeft <
+              this.offsetWidth
+            ) {
+              this.scrollX(
+                this.cells[0][range.columnEnd].x -
+                  this.scrollLeft -
+                  this.cells[0][range.columnEnd].width
+              );
+            } else if (
+              this.cells[0][range.columnEnd].x +
+                this.cells[0][range.columnEnd].width -
+                this.scrollLeft >=
+              this.clientWidth + this.offsetWidth
+            ) {
+              this.scrollX(
+                this.cells[0][range.columnEnd].x -
+                  this.scrollLeft -
+                  this.clientWidth -
+                  this.offsetWidth +
+                  this.cells[0][range.columnEnd].width
+              );
+            } else {
+              this.refreshView();
+            }
+            this.isTicking = false;
+          });
+        }
+        this.isTicking = true;
+      }
+    }
+  }
+
+  onKeyTabOrEnter(event: KeyboardEvent) {
+    if (
+      this.activeArr.length === 1 &&
+      this.activeArr[0].rowStart === this.activeArr[0].rowEnd &&
+      this.activeArr[0].columnStart === this.activeArr[0].columnEnd
+    ) {
+      if (!event.shiftKey) {
+        if (event.keyCode === KeyCode.Tab) {
+          this.activeCellPos = {
+            row: this.activeCellPos.row,
+            column:
+              this.activeCellPos.column + 1 > this.cells[0].length - 1 ||
+              event.ctrlKey
+                ? this.cells[0].length - 1
+                : this.activeCellPos.column + 1,
+            rangeIndex: 0,
+          };
+        } else if (event.keyCode === KeyCode.Enter) {
+          this.activeCellPos = {
+            row:
+              this.activeCellPos.row + 1 > this.cells.length - 1 ||
+              event.ctrlKey
+                ? this.cells.length - 1
+                : this.activeCellPos.row + 1,
+            column: this.activeCellPos.column,
+            rangeIndex: 0,
+          };
+        }
+      } else {
+        if (event.keyCode === KeyCode.Tab) {
+          this.activeCellPos = {
+            row: this.activeCellPos.row,
+            column:
+              this.activeCellPos.column - 1 < 1 || event.ctrlKey
+                ? 1
+                : this.activeCellPos.column - 1,
+            rangeIndex: 0,
+          };
+        } else if (event.keyCode === KeyCode.Enter) {
+          this.activeCellPos = {
+            row:
+              this.activeCellPos.row - 1 < 1 || event.ctrlKey
+                ? 1
+                : this.activeCellPos.row - 1,
+            column: this.activeCellPos.column,
+            rangeIndex: 0,
+          };
+        }
+      }
+      this.activeArr = [
+        {
+          rowStart: this.activeCellPos.row,
+          rowEnd: this.activeCellPos.row,
+          columnStart: this.activeCellPos.column,
+          columnEnd: this.activeCellPos.column,
+        },
+      ];
+      if (!this.isTicking) {
+        requestAnimationFrame(() => {
+          if (
+            this.cells[this.activeCellPos.row][this.activeCellPos.column].x -
+              this.scrollLeft <
+            this.offsetWidth
+          ) {
+            this.scrollX(
+              this.cells[this.activeCellPos.row][this.activeCellPos.column].x -
+                this.scrollLeft -
+                this.cells[this.activeCellPos.row][this.activeCellPos.column]
+                  .width
+            );
+          } else if (
+            this.cells[this.activeCellPos.row][this.activeCellPos.column].x +
+              this.cells[this.activeCellPos.row][this.activeCellPos.column]
+                .width -
+              this.scrollLeft >
+            this.clientWidth + this.offsetWidth
+          ) {
+            this.scrollX(
+              this.cells[this.activeCellPos.row][this.activeCellPos.column].x -
+                this.scrollLeft -
+                this.clientWidth -
+                this.offsetWidth +
+                this.cells[this.activeCellPos.row][this.activeCellPos.column]
+                  .width
+            );
+          } else {
+            this.refreshView();
+          }
+          this.isTicking = false;
+        });
+      }
+    } else {
+      let range = this.activeArr[this.activeCellPos.rangeIndex];
+      if (event.keyCode === KeyCode.Tab) {
+        if (
+          event.shiftKey
+            ? this.activeCellPos.column - 1 <
+              Math.min(range.columnStart, range.columnEnd)
+            : this.activeCellPos.column + 1 >
+              Math.max(range.columnStart, range.columnEnd)
+        ) {
+          if (
+            event.shiftKey
+              ? this.activeCellPos.row - 1 <
+                Math.min(range.rowStart, range.rowEnd)
+              : this.activeCellPos.row + 1 >
+                Math.max(range.rowStart, range.rowEnd)
+          ) {
+            const rangeIndex = event.shiftKey
+              ? this.activeCellPos.rangeIndex - 1 < 0
+                ? this.activeArr.length - 1
+                : this.activeCellPos.rangeIndex - 1
+              : this.activeCellPos.rangeIndex + 1 > this.activeArr.length - 1
+              ? 0
+              : this.activeCellPos.rangeIndex + 1;
+            range = this.activeArr[rangeIndex];
+            this.activeCellPos = {
+              row: event.shiftKey
+                ? Math.max(range.rowStart, range.rowEnd)
+                : Math.min(range.rowStart, range.rowEnd),
+              column: event.shiftKey
+                ? Math.max(range.columnStart, range.columnEnd)
+                : Math.min(range.columnStart, range.columnEnd),
+              rangeIndex,
+            };
+          } else {
+            event.shiftKey
+              ? this.activeCellPos.row--
+              : this.activeCellPos.row++;
+            this.activeCellPos.column = event.shiftKey
+              ? Math.max(range.columnStart, range.columnEnd)
+              : (this.activeCellPos.column = Math.min(
+                  range.columnStart,
+                  range.columnEnd
+                ));
+          }
+        } else {
+          event.shiftKey
+            ? this.activeCellPos.column--
+            : this.activeCellPos.column++;
+        }
+      } else if (event.keyCode === KeyCode.Enter) {
+        if (
+          event.shiftKey
+            ? this.activeCellPos.row - 1 <
+              Math.min(range.rowStart, range.rowEnd)
+            : this.activeCellPos.row + 1 >
+              Math.max(range.rowStart, range.rowEnd)
+        ) {
+          if (
+            event.shiftKey
+              ? this.activeCellPos.column - 1 <
+                Math.min(range.columnStart, range.columnEnd)
+              : this.activeCellPos.column + 1 >
+                Math.max(range.columnStart, range.columnEnd)
+          ) {
+            const rangeIndex = event.shiftKey
+              ? this.activeCellPos.rangeIndex - 1 < 0
+                ? this.activeArr.length - 1
+                : this.activeCellPos.rangeIndex - 1
+              : this.activeCellPos.rangeIndex + 1 > this.activeArr.length - 1
+              ? 0
+              : this.activeCellPos.rangeIndex + 1;
+            range = this.activeArr[rangeIndex];
+            this.activeCellPos = {
+              row: event.shiftKey
+                ? Math.max(range.rowStart, range.rowEnd)
+                : Math.min(range.rowStart, range.rowEnd),
+              column: event.shiftKey
+                ? Math.max(range.columnStart, range.columnEnd)
+                : Math.min(range.columnStart, range.columnEnd),
+              rangeIndex,
+            };
+          } else {
+            event.shiftKey
+              ? this.activeCellPos.column--
+              : this.activeCellPos.column++;
+            this.activeCellPos.row = event.shiftKey
+              ? Math.max(range.rowStart, range.rowEnd)
+              : Math.min(range.rowStart, range.rowEnd);
+          }
+        } else {
+          event.shiftKey ? this.activeCellPos.row-- : this.activeCellPos.row++;
+        }
+      }
+      this.setActive();
+      this.drawScrollBar(this.ctx);
+      this.drawRuler(this.ctx);
+    }
+  }
+
   onKeyDown(event: KeyboardEvent) {
     // console.log('keydown', event);
+    switch (event.keyCode) {
+      case KeyCode.Tab:
+      case KeyCode.Enter:
+        event.preventDefault();
+        this.onKeyTabOrEnter(event);
+        break;
+      case KeyCode.ArrowUp:
+      case KeyCode.ArrowDown:
+        event.preventDefault();
+        this.onKeyArrowUpOrDown(event);
+        break;
+      case KeyCode.ArrowLeft:
+      case KeyCode.ArrowRight:
+        event.preventDefault();
+        this.onKeyArrowLeftOrRight(event);
+        break;
+      default:
+        break;
+    }
   }
 }
