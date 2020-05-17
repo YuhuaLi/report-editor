@@ -78,7 +78,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       Math.ceil((this.height - this.offsetHeight) / Style.cellHeight) + 2;
     this.ctx.font = `${Style.rulerCellFontWeight} ${Style.rulerCellFontSize}px ${Style.rulerCellFontFamily}`;
     this.offsetWidth = Math.ceil(
-      this.ctx.measureText(`  ${this.viewRowCount}  `).width
+      this.ctx.measureText(`     ${this.viewRowCount}    `).width
     );
     this.clientWidth = this.width - this.offsetWidth - Style.scrollBarWidth;
     this.viewColumnCount =
@@ -1767,7 +1767,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     }
   }
 
-  scrollX(deltaX: number) {
+  scrollX(deltaX: number, immediate = true) {
     if (this.scrollLeft === 0 && deltaX < 0) {
       return;
     }
@@ -1797,10 +1797,12 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       this.scrollLeft = 0;
     }
 
-    this.refreshView();
+    if (immediate) {
+      this.refreshView();
+    }
   }
 
-  scrollY(deltaY: number) {
+  scrollY(deltaY: number, immediate = true) {
     if (this.scrollTop === 0 && deltaY < 0) {
       return;
     }
@@ -1832,7 +1834,9 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       this.scrollTop = 0;
     }
 
-    this.refreshView();
+    if (immediate) {
+      this.refreshView();
+    }
   }
 
   onWheel(event: WheelEvent) {
@@ -2280,6 +2284,40 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     }
   }
 
+  onKeyHome(event: KeyboardEvent) {
+    this.activeArr = [
+      {
+        rowStart:
+          event.shiftKey || (!event.shiftKey && !event.ctrlKey)
+            ? this.activeCellPos.row
+            : 1,
+        rowEnd:
+          (event.shiftKey && !event.ctrlKey) ||
+          (!event.shiftKey && !event.ctrlKey)
+            ? this.activeCellPos.row
+            : 1,
+        columnStart: event.shiftKey ? this.activeCellPos.column : 1,
+        columnEnd:
+          event.shiftKey || event.ctrlKey || (!event.shiftKey && !event.ctrlKey)
+            ? 1
+            : this.activeCellPos.column,
+      },
+    ];
+    this.activeCellPos = {
+      row: this.activeArr[0].rowStart,
+      column: this.activeArr[0].columnStart,
+      rangeIndex: 0,
+    };
+    const range = this.activeArr[0];
+    if (this.scrollLeft > 0) {
+      this.scrollX(-1 * this.scrollLeft, false);
+    }
+    if (event.ctrlKey && this.scrollTop > 0) {
+      this.scrollY(-1 * this.scrollTop, false);
+    }
+    this.refreshView();
+  }
+
   onKeyDown(event: KeyboardEvent) {
     // console.log('keydown', event);
     switch (event.keyCode) {
@@ -2297,6 +2335,10 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       case KeyCode.ArrowRight:
         event.preventDefault();
         this.onKeyArrowLeftOrRight(event);
+        break;
+      case KeyCode.Home:
+        event.preventDefault();
+        this.onKeyHome(event);
         break;
       default:
         break;
