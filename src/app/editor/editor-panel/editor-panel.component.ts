@@ -19,6 +19,7 @@ import { KeyCode } from 'src/app/core/model/key-code.enmu';
 export class EditorPanelComponent implements OnInit, AfterViewInit {
   @ViewChild('panel') panel: ElementRef;
   @ViewChild('actionPanel') actionPanel: ElementRef;
+  @ViewChild('editCell') editCell: ElementRef;
 
   width = 0;
   height = 0;
@@ -53,7 +54,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
   clientHeight = 0;
   mousePoint: any;
   autoScrollTimeoutID: any;
-  activeCellPos: any = { row: 1, column: 1 };
+  activeCellPos: any = { row: 1, column: 1, rangeIndex: 0 };
   activeArr: CellRange[] = [
     { rowStart: 1, columnStart: 1, rowEnd: 1, columnEnd: 1 },
   ];
@@ -954,8 +955,15 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
   }
 
   onMouseDown(event: MouseEvent) {
+    event.preventDefault();
     this.panel.nativeElement.focus();
-    this.state.isCellEdit = false;
+
+    if (this.state.isCellEdit) {
+      this.state.isCellEdit = false;
+      this.drawCell(this.ctx, this.editingCell);
+      this.editingCell = null;
+    }
+
     if (event.button === 2) {
       event.returnValue = false;
       return;
@@ -1197,29 +1205,50 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
                 columnEnd: cell.position.column,
               };
             } else {
-              this.state.isSelectCell = true;
-              this.activeArr.push({
-                rowStart:
-                  (event.shiftKey &&
-                    this.activeArr.length &&
-                    this.activeArr[this.activeArr.length - 1].rowStart) ||
-                  cell.position.row,
-                columnStart:
-                  (event.shiftKey &&
-                    this.activeArr.length &&
-                    this.activeArr[this.activeArr.length - 1].columnStart) ||
-                  cell.position.column,
-                rowEnd: cell.position.row,
-                columnEnd: cell.position.column,
-              });
-              this.activeCellPos = {
-                row: this.activeArr[this.activeArr.length - 1].rowStart,
-                column: this.activeArr[this.activeArr.length - 1].columnStart,
-                rangeIndex: this.activeArr.length - 1,
-              };
-              if (!event.ctrlKey || event.shiftKey) {
-                this.activeArr = [this.activeArr[this.activeArr.length - 1]];
+              if (
+                cell.position.row === this.activeCellPos.row &&
+                cell.position.column === this.activeCellPos.column &&
+                this.activeArr[this.activeCellPos.rangeIndex].rowStart ===
+                  this.activeArr[this.activeCellPos.rangeIndex].rowEnd &&
+                this.activeArr[this.activeCellPos.rangeIndex].columnStart ===
+                  this.activeArr[this.activeCellPos.rangeIndex].columnEnd
+              ) {
+                this.editingCell = cell;
+                this.state.isCellEdit = true;
+                this.activeArr = [
+                  {
+                    rowStart: cell.position.row,
+                    rowEnd: cell.position.row,
+                    columnStart: cell.position.column,
+                    columnEnd: cell.position.column,
+                  },
+                ];
                 this.activeCellPos.rangeIndex = 0;
+              } else {
+                this.state.isSelectCell = true;
+                this.activeArr.push({
+                  rowStart:
+                    (event.shiftKey &&
+                      this.activeArr.length &&
+                      this.activeArr[this.activeArr.length - 1].rowStart) ||
+                    cell.position.row,
+                  columnStart:
+                    (event.shiftKey &&
+                      this.activeArr.length &&
+                      this.activeArr[this.activeArr.length - 1].columnStart) ||
+                    cell.position.column,
+                  rowEnd: cell.position.row,
+                  columnEnd: cell.position.column,
+                });
+                this.activeCellPos = {
+                  row: this.activeArr[this.activeArr.length - 1].rowStart,
+                  column: this.activeArr[this.activeArr.length - 1].columnStart,
+                  rangeIndex: this.activeArr.length - 1,
+                };
+                if (!event.ctrlKey || event.shiftKey) {
+                  this.activeArr = [this.activeArr[this.activeArr.length - 1]];
+                  this.activeCellPos.rangeIndex = 0;
+                }
               }
             }
 
@@ -1746,6 +1775,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
   }
 
   onMouseUp(event: MouseEvent) {
+    // console.log('onmouseup');
     this.state.isSelectCell = false;
     this.state.isSelectScrollYThumb = false;
     this.state.isSelectScrollXThumb = false;
@@ -2248,10 +2278,6 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
   }
 
   onKeyPageUpOrDown(event: KeyboardEvent) {
-    console.log(
-      this.cells[this.activeCellPos.row][this.activeCellPos.column].y,
-      this.clientHeight
-    );
     let posY =
       this.cells[this.activeCellPos.row][this.activeCellPos.column].y +
       (event.code === KeyCode.PageDown ? 1 : -1) * this.clientHeight;
@@ -2318,21 +2344,8 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     }
   }
 
-  onDblClick(event: MouseEvent) {
-    this.state.isCellEdit = true;
-    for (let rLen = this.viewCells.length, i = rLen - 1; i > 0; i--) {
-      for (let cLen = this.viewCells[i].length, j = cLen - 1; j > 0; j--) {
-        const cell = this.viewCells[i][j];
-        if (this.inCellArea(event.clientX, event.clientY, cell)) {
-          this.editingCell = cell;
-          break;
-        }
-      }
-    }
-  }
-
   onKeyDown(event: KeyboardEvent) {
-    console.log('keydown', event);
+    // console.log('keydown', event);
     switch (event.code) {
       case KeyCode.Tab:
       case KeyCode.Enter:
