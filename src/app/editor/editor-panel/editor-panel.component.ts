@@ -1853,7 +1853,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
 
   onKeyArrowUpOrDown(event: KeyboardEvent) {
     if (!event.shiftKey) {
-      if (event.keyCode === KeyCode.ArrowDown) {
+      if (event.code === KeyCode.ArrowDown) {
         this.activeCellPos = {
           row:
             this.activeCellPos.row + 1 > this.cells.length - 1 || event.ctrlKey
@@ -1862,7 +1862,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
           column: this.activeCellPos.column,
           rangeIndex: 0,
         };
-      } else if (event.keyCode === KeyCode.ArrowUp) {
+      } else if (event.code === KeyCode.ArrowUp) {
         this.activeCellPos = {
           row:
             this.activeCellPos.row - 1 < 1 || event.ctrlKey
@@ -1882,34 +1882,10 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       ];
       if (!this.isTicking) {
         requestAnimationFrame(() => {
-          if (
-            this.cells[this.activeCellPos.row][this.activeCellPos.column].y -
-              this.scrollTop <
-            this.offsetHeight
-          ) {
-            this.scrollY(
-              this.cells[this.activeCellPos.row][this.activeCellPos.column].y -
-                this.scrollTop -
-                this.offsetHeight
-            );
-          } else if (
-            this.cells[this.activeCellPos.row][this.activeCellPos.column].y +
-              this.cells[this.activeCellPos.row][this.activeCellPos.column]
-                .height -
-              this.scrollTop >
-            this.clientHeight + this.offsetHeight
-          ) {
-            this.scrollY(
-              this.cells[this.activeCellPos.row][this.activeCellPos.column].y -
-                this.scrollTop -
-                this.clientHeight -
-                this.offsetHeight +
-                this.cells[this.activeCellPos.row][this.activeCellPos.column]
-                  .height
-            );
-          } else {
-            this.refreshView();
-          }
+          this.resetCellPerspective(
+            this.cells[this.activeCellPos.row][this.activeCellPos.column]
+          );
+
           this.isTicking = false;
         });
       }
@@ -1926,44 +1902,26 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       // }
       const range = this.activeArr[this.activeCellPos.rangeIndex];
       if (range) {
-        if (event.keyCode === KeyCode.ArrowDown) {
+        if (event.code === KeyCode.ArrowDown) {
           range.rowEnd =
             range.rowEnd + 1 >
               this.cells[this.cells.length - 1][0].position.row || event.ctrlKey
               ? this.cells[this.cells.length - 1][0].position.row
               : range.rowEnd + 1;
-        } else if (event.keyCode === KeyCode.ArrowUp) {
+        } else if (event.code === KeyCode.ArrowUp) {
           range.rowEnd =
             range.rowEnd - 1 < 1 || event.ctrlKey ? 1 : range.rowEnd - 1;
         }
         if (!this.isTicking) {
           requestAnimationFrame(() => {
-            if (
-              this.cells[range.rowEnd][0].y - this.scrollTop <
-              this.offsetHeight
-            ) {
-              this.scrollY(
-                this.cells[range.rowEnd][0].y -
-                  this.scrollTop -
-                  // this.cells[range.rowEnd][0].height
-                  this.offsetHeight
-              );
-            } else if (
-              this.cells[range.rowEnd][0].y +
-                this.cells[range.rowEnd][0].height -
-                this.scrollTop >=
-              this.clientHeight + this.offsetHeight
-            ) {
-              this.scrollY(
-                this.cells[range.rowEnd][0].y -
-                  this.scrollTop -
-                  this.clientHeight -
-                  this.offsetHeight +
-                  this.cells[range.rowEnd][0].height
-              );
-            } else {
-              this.refreshView();
-            }
+            this.resetCellPerspective(
+              this.cells[range.rowEnd][
+                event.code === KeyCode.ArrowDown
+                  ? Math.max(range.columnStart, range.columnEnd)
+                  : Math.min(range.columnStart, range.columnEnd)
+              ]
+            );
+
             this.isTicking = false;
           });
         }
@@ -1974,7 +1932,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
 
   onKeyArrowLeftOrRight(event: KeyboardEvent) {
     if (!event.shiftKey) {
-      if (event.keyCode === KeyCode.ArrowRight) {
+      if (event.code === KeyCode.ArrowRight) {
         this.activeCellPos = {
           row: this.activeCellPos.row,
           column:
@@ -1984,7 +1942,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
               : this.activeCellPos.column + 1,
           rangeIndex: 0,
         };
-      } else if (event.keyCode === KeyCode.ArrowLeft) {
+      } else if (event.code === KeyCode.ArrowLeft) {
         this.activeCellPos = {
           row: this.activeCellPos.row,
           column:
@@ -2004,34 +1962,9 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       ];
       if (!this.isTicking) {
         requestAnimationFrame(() => {
-          if (
-            this.cells[this.activeCellPos.row][this.activeCellPos.column].x -
-              this.scrollLeft <
-            this.offsetWidth
-          ) {
-            this.scrollX(
-              this.cells[this.activeCellPos.row][this.activeCellPos.column].x -
-                this.scrollLeft -
-                this.offsetWidth
-            );
-          } else if (
-            this.cells[this.activeCellPos.row][this.activeCellPos.column].x +
-              this.cells[this.activeCellPos.row][this.activeCellPos.column]
-                .width -
-              this.scrollLeft >
-            this.clientWidth + this.offsetWidth
-          ) {
-            this.scrollX(
-              this.cells[this.activeCellPos.row][this.activeCellPos.column].x -
-                this.scrollLeft -
-                this.clientWidth -
-                this.offsetWidth +
-                this.cells[this.activeCellPos.row][this.activeCellPos.column]
-                  .width
-            );
-          } else {
-            this.refreshView();
-          }
+          this.resetCellPerspective(
+            this.cells[this.activeCellPos.row][this.activeCellPos.column]
+          );
           this.isTicking = false;
         });
       }
@@ -2048,42 +1981,24 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       // }
       const range = this.activeArr[this.activeCellPos.rangeIndex];
       if (range) {
-        if (event.keyCode === KeyCode.ArrowRight) {
+        if (event.code === KeyCode.ArrowRight) {
           range.columnEnd =
             range.columnEnd + 1 > this.cells[0].length - 1 || event.ctrlKey
               ? this.cells[0].length - 1
               : range.columnEnd + 1;
-        } else if (event.keyCode === KeyCode.ArrowLeft) {
+        } else if (event.code === KeyCode.ArrowLeft) {
           range.columnEnd =
             range.columnEnd - 1 < 1 || event.ctrlKey ? 1 : range.columnEnd - 1;
         }
         if (!this.isTicking) {
           requestAnimationFrame(() => {
-            if (
-              this.cells[0][range.columnEnd].x - this.scrollLeft <
-              this.offsetWidth
-            ) {
-              this.scrollX(
-                this.cells[0][range.columnEnd].x -
-                  this.scrollLeft -
-                  this.offsetWidth
-              );
-            } else if (
-              this.cells[0][range.columnEnd].x +
-                this.cells[0][range.columnEnd].width -
-                this.scrollLeft >=
-              this.clientWidth + this.offsetWidth
-            ) {
-              this.scrollX(
-                this.cells[0][range.columnEnd].x -
-                  this.scrollLeft -
-                  this.clientWidth -
-                  this.offsetWidth +
-                  this.cells[0][range.columnEnd].width
-              );
-            } else {
-              this.refreshView();
-            }
+            this.resetCellPerspective(
+              this.cells[range.rowEnd][
+                event.code === KeyCode.ArrowRight
+                  ? Math.max(range.columnStart, range.columnEnd)
+                  : Math.min(range.columnStart, range.columnEnd)
+              ]
+            );
             this.isTicking = false;
           });
         }
@@ -2099,7 +2014,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       this.activeArr[0].columnStart === this.activeArr[0].columnEnd
     ) {
       if (!event.shiftKey) {
-        if (event.keyCode === KeyCode.Tab) {
+        if (event.code === KeyCode.Tab) {
           this.activeCellPos = {
             row: this.activeCellPos.row,
             column:
@@ -2109,7 +2024,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
                 : this.activeCellPos.column + 1,
             rangeIndex: 0,
           };
-        } else if (event.keyCode === KeyCode.Enter) {
+        } else if (event.code === KeyCode.Enter) {
           this.activeCellPos = {
             row:
               this.activeCellPos.row + 1 > this.cells.length - 1 ||
@@ -2121,7 +2036,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
           };
         }
       } else {
-        if (event.keyCode === KeyCode.Tab) {
+        if (event.code === KeyCode.Tab) {
           this.activeCellPos = {
             row: this.activeCellPos.row,
             column:
@@ -2130,7 +2045,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
                 : this.activeCellPos.column - 1,
             rangeIndex: 0,
           };
-        } else if (event.keyCode === KeyCode.Enter) {
+        } else if (event.code === KeyCode.Enter) {
           this.activeCellPos = {
             row:
               this.activeCellPos.row - 1 < 1 || event.ctrlKey
@@ -2151,40 +2066,15 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       ];
       if (!this.isTicking) {
         requestAnimationFrame(() => {
-          if (
-            this.cells[this.activeCellPos.row][this.activeCellPos.column].x -
-              this.scrollLeft <
-            this.offsetWidth
-          ) {
-            this.scrollX(
-              this.cells[this.activeCellPos.row][this.activeCellPos.column].x -
-                this.scrollLeft -
-                this.offsetWidth
-            );
-          } else if (
-            this.cells[this.activeCellPos.row][this.activeCellPos.column].x +
-              this.cells[this.activeCellPos.row][this.activeCellPos.column]
-                .width -
-              this.scrollLeft >
-            this.clientWidth + this.offsetWidth
-          ) {
-            this.scrollX(
-              this.cells[this.activeCellPos.row][this.activeCellPos.column].x -
-                this.scrollLeft -
-                this.clientWidth -
-                this.offsetWidth +
-                this.cells[this.activeCellPos.row][this.activeCellPos.column]
-                  .width
-            );
-          } else {
-            this.refreshView();
-          }
+          this.resetCellPerspective(
+            this.cells[this.activeCellPos.row][this.activeCellPos.column]
+          );
           this.isTicking = false;
         });
       }
     } else {
       let range = this.activeArr[this.activeCellPos.rangeIndex];
-      if (event.keyCode === KeyCode.Tab) {
+      if (event.code === KeyCode.Tab) {
         if (
           event.shiftKey
             ? this.activeCellPos.column - 1 <
@@ -2232,7 +2122,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
             ? this.activeCellPos.column--
             : this.activeCellPos.column++;
         }
-      } else if (event.keyCode === KeyCode.Enter) {
+      } else if (event.code === KeyCode.Enter) {
         if (
           event.shiftKey
             ? this.activeCellPos.row - 1 <
@@ -2279,67 +2169,47 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
 
       if (!this.isTicking) {
         requestAnimationFrame(() => {
-          if (
-            this.cells[this.activeCellPos.row][this.activeCellPos.column].x -
-              this.scrollLeft <
-            this.offsetWidth
-          ) {
-            this.scrollX(
-              this.cells[this.activeCellPos.row][this.activeCellPos.column].x -
-                this.scrollLeft -
-                this.offsetWidth,
-              false
-            );
-          } else if (
-            this.cells[this.activeCellPos.row][this.activeCellPos.column].x +
-              this.cells[this.activeCellPos.row][this.activeCellPos.column]
-                .width -
-              this.scrollLeft >
-            this.clientWidth + this.offsetWidth
-          ) {
-            this.scrollX(
-              this.cells[this.activeCellPos.row][this.activeCellPos.column].x -
-                this.scrollLeft -
-                this.clientWidth -
-                this.offsetWidth +
-                this.cells[this.activeCellPos.row][this.activeCellPos.column]
-                  .width,
-              false
-            );
-          }
-          if (
-            this.cells[this.activeCellPos.row][this.activeCellPos.column].y -
-              this.scrollTop <
-            this.offsetHeight
-          ) {
-            this.scrollY(
-              this.cells[this.activeCellPos.row][this.activeCellPos.column].y -
-                this.scrollTop -
-                this.offsetHeight,
-              false
-            );
-          } else if (
-            this.cells[this.activeCellPos.row][this.activeCellPos.column].y +
-              this.cells[this.activeCellPos.row][this.activeCellPos.column]
-                .height -
-              this.scrollTop >
-            this.clientHeight + this.offsetHeight
-          ) {
-            this.scrollY(
-              this.cells[this.activeCellPos.row][this.activeCellPos.column].y -
-                this.scrollTop -
-                this.clientHeight -
-                this.offsetHeight +
-                this.cells[this.activeCellPos.row][this.activeCellPos.column]
-                  .height,
-              false
-            );
-          }
-          this.refreshView();
+          this.resetCellPerspective(
+            this.cells[this.activeCellPos.row][this.activeCellPos.column]
+          );
           this.isTicking = false;
         });
       }
     }
+  }
+
+  resetCellPerspective(cell: Cell) {
+    if (cell.x - this.scrollLeft < this.offsetWidth) {
+      this.scrollX(cell.x - this.scrollLeft - this.offsetWidth, false);
+    } else if (
+      cell.x + cell.width - this.scrollLeft >
+      this.clientWidth + this.offsetWidth
+    ) {
+      this.scrollX(
+        cell.x -
+          this.scrollLeft -
+          this.clientWidth -
+          this.offsetWidth +
+          cell.width,
+        false
+      );
+    }
+    if (cell.y - this.scrollTop < this.offsetHeight) {
+      this.scrollY(cell.y - this.scrollTop - this.offsetHeight, false);
+    } else if (
+      cell.y + cell.height - this.scrollTop >
+      this.clientHeight + this.offsetHeight
+    ) {
+      this.scrollY(
+        cell.y -
+          this.scrollTop -
+          this.clientHeight -
+          this.offsetHeight +
+          cell.height,
+        false
+      );
+    }
+    this.refreshView();
   }
 
   onKeyHome(event: KeyboardEvent) {
@@ -2376,9 +2246,80 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     this.refreshView();
   }
 
+  onKeyPageUpOrDown(event: KeyboardEvent) {
+    console.log(
+      this.cells[this.activeCellPos.row][this.activeCellPos.column].y,
+      this.clientHeight
+    );
+    let posY =
+      this.cells[this.activeCellPos.row][this.activeCellPos.column].y +
+      (event.code === KeyCode.PageDown ? 1 : -1) * this.clientHeight;
+    posY = posY < this.offsetHeight ? this.offsetHeight : posY;
+    let i = this.activeCellPos.row;
+    while (true) {
+      const [y, height] = this.cells[i]
+        ? [
+            this.cells[i][this.activeCellPos.column].y,
+            this.cells[i][this.activeCellPos.column].height,
+          ]
+        : [
+            this.cells[this.cells.length - 1][0].y +
+              this.cells[this.cells.length - 1][0].height +
+              (i - this.cells.length) * Style.cellHeight,
+            Style.cellHeight,
+          ];
+      console.log(i, posY, y, height);
+      if (inRange(posY, y, y + height, true)) {
+        this.scrollY(y - this.cells[this.activeCellPos.row][0].y, false);
+        this.activeArr = [
+          {
+            rowStart: event.shiftKey ? this.activeCellPos.row : i,
+            rowEnd: i,
+            columnStart: this.activeCellPos.column,
+            columnEnd: event.shiftKey
+              ? this.activeArr[this.activeCellPos.rangeIndex].columnStart ===
+                this.activeCellPos.column
+                ? this.activeArr[this.activeCellPos.rangeIndex].columnEnd
+                : this.activeArr[this.activeCellPos.rangeIndex].columnStart
+              : this.activeCellPos.column,
+          },
+        ];
+        this.activeCellPos = {
+          row: event.shiftKey ? this.activeCellPos.row : i,
+          column: this.activeCellPos.column,
+          rangeIndex: 0,
+        };
+        if (!this.isTicking) {
+          requestAnimationFrame(() => {
+            this.resetCellPerspective(
+              event.shiftKey
+                ? this.cells[
+                    event.code === KeyCode.PageDown
+                      ? Math.max(
+                          this.activeArr[0].rowStart,
+                          this.activeArr[0].rowEnd
+                        )
+                      : Math.min(
+                          this.activeArr[0].rowStart,
+                          this.activeArr[0].rowEnd
+                        )
+                  ][this.activeArr[0].columnEnd]
+                : this.cells[this.activeCellPos.row][this.activeCellPos.column]
+            );
+            this.isTicking = false;
+          });
+        }
+        this.isTicking = true;
+        break;
+      } else {
+        event.code === KeyCode.PageDown ? i++ : i--;
+      }
+    }
+  }
+
   onKeyDown(event: KeyboardEvent) {
-    // console.log('keydown', event);
-    switch (event.keyCode) {
+    console.log('keydown', event);
+    switch (event.code) {
       case KeyCode.Tab:
       case KeyCode.Enter:
         event.preventDefault();
@@ -2397,6 +2338,11 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       case KeyCode.Home:
         event.preventDefault();
         this.onKeyHome(event);
+        break;
+      case KeyCode.PageUp:
+      case KeyCode.PageDown:
+        event.preventDefault();
+        this.onKeyPageUpOrDown(event);
         break;
       default:
         break;
