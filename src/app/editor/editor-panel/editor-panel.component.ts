@@ -5,7 +5,6 @@ import {
   ViewChild,
   ElementRef,
   AfterViewInit,
-  ɵConsole,
 } from '@angular/core';
 import Cell from './cell.calss';
 import { inRange } from 'src/app/core/decorator/utils/function';
@@ -33,6 +32,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
   offsetHeight = 30;
   cells: Cell[][] = [];
   viewCells: Cell[][] = [];
+  editingCell: Cell;
   // activeRange: {
   //   rowStart: number;
   //   columnStart: number;
@@ -955,6 +955,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
 
   onMouseDown(event: MouseEvent) {
     this.panel.nativeElement.focus();
+    this.state.isCellEdit = false;
     if (event.button === 2) {
       event.returnValue = false;
       return;
@@ -2313,6 +2314,19 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
         break;
       } else {
         event.code === KeyCode.PageDown ? i++ : i--;
+      }
+    }
+  }
+
+  onDblClick(event: MouseEvent) {
+    this.state.isCellEdit = true;
+    for (let rLen = this.viewCells.length, i = rLen - 1; i > 0; i--) {
+      for (let cLen = this.viewCells[i].length, j = cLen - 1; j > 0; j--) {
+        const cell = this.viewCells[i][j];
+        if (this.inCellArea(event.clientX, event.clientY, cell)) {
+          this.editingCell = cell;
+          break;
+        }
       }
     }
   }

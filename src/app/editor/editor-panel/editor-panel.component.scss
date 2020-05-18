@@ -15,4 +15,23 @@
     background: transparent;
     pointer-events: none;
   }
+
+  .mask {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+    pointer-events: none;
+    .editCell {
+      position: absolute;
+      box-sizing: border-box;
+      pointer-events: auto;
+      border: 2px solid #096;
+      &:focus {
+        outline: none;
+      }
+    }
+  }
 }

@@ -13,9 +13,23 @@
     (wheel)="onWheel($event)"
     (contextmenu)="onContextMenu($event)"
     (keydown)="onKeyDown($event)"
+    (dblclick)="onDblClick($event)"
   ></canvas>
-  <canvas
-    #actionPanel
-    class="action-panel"
-  ></canvas>
+  <canvas #actionPanel class="action-panel"></canvas>
+  <ng-container *ngIf="this.state.isCellEdit">
+    <div class="mask" [ngStyle]="{ left: offsetWidth, top: offsetHeight }">
+      <input
+        [appAutoFocus]
+        type="text"
+        class="editCell"
+        [ngStyle]="{
+          'left.px': editingCell.x - scrollLeft,
+          'top.px': editingCell.y - scrollTop,
+          'width.px': editingCell?.width,
+          'height.px': editingCell?.height
+        }"
+        [value]="editingCell?.content.value"
+      />
+    </div>
+  </ng-container>
 </div>
