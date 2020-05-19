@@ -1105,7 +1105,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     }
     const currentTime = new Date().getTime();
     let isDblClick = false;
-    if (currentTime - this.mousePoint.lastModifyTime < 500) {
+    if (currentTime - this.mousePoint.lastModifyTime < 300) {
       isDblClick = true;
     }
     this.mousePoint = {
