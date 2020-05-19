@@ -7,5 +7,8 @@ export enum KeyCode {
   ArrowLeft = 'ArrowLeft',
   ArrowUp = 'ArrowUp',
   ArrowRight = 'ArrowRight',
-  ArrowDown = 'ArrowDown'
+  ArrowDown = 'ArrowDown',
+  Escape = 'Escape',
+  Delete = 'Delete',
+  Backspace = 'Backspace',
 }

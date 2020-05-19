@@ -1,6 +1,7 @@
 <div class="panel panel-wrapper">
   <canvas
-    tabindex="-1"
+    tabindex="0"
+    autofocus
     #panel
     class="panel"
     (mouseover)="onMouseOver($event)"
@@ -13,23 +14,35 @@
     (wheel)="onWheel($event)"
     (contextmenu)="onContextMenu($event)"
     (keydown)="onKeyDown($event)"
+    (keypress)="onKeyPress($event)"
   ></canvas>
   <canvas #actionPanel class="action-panel"></canvas>
   <ng-container *ngIf="this.state.isCellEdit">
-    <div class="mask" [ngStyle]="{ left: offsetWidth, top: offsetHeight }">
-      <input
-        appAutoFocus
-        name="editCell"
-        type="text"
-        class="editCell"
-        [ngStyle]="{
-          'left.px': editingCell?.x - scrollLeft,
-          'top.px': editingCell?.y - scrollTop,
-          'width.px': editingCell?.width,
-          'height.px': editingCell?.height
-        }"
-        [(ngModel)]="editingCell?.content.value"
-      />
+    <div
+      class="mask"
+      [ngStyle]="{
+        'left.px': offsetWidth,
+        'top.px': offsetHeight,
+        'right.px': scrollBarWidth,
+        'bottom.px': scrollBarWidth
+      }"
+    >
+      <div class="mask-content">
+        <input
+          appAutoFocus
+          name="editCell"
+          type="text"
+          class="editCell"
+          [ngStyle]="{
+            'left.px': editingCell?.x - scrollLeft - this.offsetWidth + 1,
+            'top.px': editingCell?.y - scrollTop - offsetHeight + 1,
+            'width.px': editingCell?.width - 2,
+            'height.px': editingCell?.height - 2
+          }"
+          [(ngModel)]="editingCell?.content.value"
+          (keydown)="onEditCellKeyDown($event)"
+        />
+      </div>
     </div>
   </ng-container>
 </div>

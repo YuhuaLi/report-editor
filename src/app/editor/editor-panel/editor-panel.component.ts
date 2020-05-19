@@ -1,4 +1,4 @@
-import { Style } from './style.const';
+import { Style } from '../../core/model/style.const';
 import {
   Component,
   OnInit,
@@ -19,7 +19,6 @@ import { KeyCode } from 'src/app/core/model/key-code.enmu';
 export class EditorPanelComponent implements OnInit, AfterViewInit {
   @ViewChild('panel') panel: ElementRef;
   @ViewChild('actionPanel') actionPanel: ElementRef;
-  @ViewChild('editCell') editCell: ElementRef;
 
   width = 0;
   height = 0;
@@ -34,6 +33,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
   cells: Cell[][] = [];
   viewCells: Cell[][] = [];
   editingCell: Cell;
+  scrollBarWidth = Style.scrollBarWidth;
   // activeRange: {
   //   rowStart: number;
   //   columnStart: number;
@@ -163,7 +163,17 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       position: { row: rk, column: ck },
       x: ck === 0 ? 0 : this.offsetWidth + (ck - 1) * Style.cellWidth,
       y: isXRuler ? 0 : this.offsetHeight + (rk - 1) * Style.cellHeight,
-      width: isYRuler ? this.offsetWidth : Style.cellWidth,
+      // get width() {
+      //   return isXRuler || isYRuler
+      //     ? isYRuler
+      //       ? this.offsetWidth
+      //       : Style.cellWidth
+      //     : (this.cells && this.cells[0] && this.cells[0][ck].width) ||
+      //         Style.cellWidth;
+      // },
+      width: isYRuler
+            ? this.offsetWidth
+            : Style.cellWidth,
       height: isXRuler ? this.offsetHeight : Style.cellHeight,
       type:
         isXRuler && isYRuler ? 'all' : isXRuler || isYRuler ? 'ruler' : 'cell',
@@ -173,7 +183,8 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
             ? this.generateRowNum(rk)
             : isXRuler && !isYRuler
             ? this.generateColumnNum(ck)
-            : this.generateRowNum(rk) + this.generateColumnNum(ck),
+            : null,
+        previousValue: null,
       },
       fontWeight:
         isXRuler || isYRuler ? Style.rulerCellFontWeight : Style.cellFontWeight,
@@ -959,9 +970,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     this.panel.nativeElement.focus();
 
     if (this.state.isCellEdit) {
-      this.state.isCellEdit = false;
-      this.drawCell(this.ctx, this.editingCell);
-      this.editingCell = null;
+      this.editCellCompelte();
     }
 
     if (event.button === 2) {
@@ -1213,6 +1222,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
                 this.activeArr[this.activeCellPos.rangeIndex].columnStart ===
                   this.activeArr[this.activeCellPos.rangeIndex].columnEnd
               ) {
+                this.resetCellPerspective(cell);
                 this.editingCell = cell;
                 this.state.isCellEdit = true;
                 this.activeArr = [
@@ -1932,7 +1942,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       //   }
       // }
       const range = this.activeArr[this.activeCellPos.rangeIndex];
-      if (range) {
+      if (range && range.rowEnd !== Infinity) {
         if (event.code === KeyCode.ArrowDown) {
           range.rowEnd =
             range.rowEnd + 1 >
@@ -1947,9 +1957,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
           requestAnimationFrame(() => {
             this.resetCellPerspective(
               this.cells[range.rowEnd][
-                event.code === KeyCode.ArrowDown
-                  ? Math.max(range.columnStart, range.columnEnd)
-                  : Math.min(range.columnStart, range.columnEnd)
+                range.columnEnd === Infinity ? 0 : range.columnEnd
               ]
             );
 
@@ -2011,7 +2019,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       //   }
       // }
       const range = this.activeArr[this.activeCellPos.rangeIndex];
-      if (range) {
+      if (range && range.columnEnd !== Infinity) {
         if (event.code === KeyCode.ArrowRight) {
           range.columnEnd =
             range.columnEnd + 1 > this.cells[0].length - 1 || event.ctrlKey
@@ -2024,7 +2032,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
         if (!this.isTicking) {
           requestAnimationFrame(() => {
             this.resetCellPerspective(
-              this.cells[range.rowEnd][
+              this.cells[range.rowEnd === Infinity ? 0 : range.rowEnd][
                 event.code === KeyCode.ArrowRight
                   ? Math.max(range.columnStart, range.columnEnd)
                   : Math.min(range.columnStart, range.columnEnd)
@@ -2344,8 +2352,38 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     }
   }
 
+  deleteContent(rangeArr: CellRange[]) {
+    for (let i = rangeArr.length - 1; i >= 0; i--) {
+      const range = this.activeArr[i];
+      for (
+        let rs = Math.min(range.rowStart, range.rowEnd),
+          re = Math.min(
+            Math.max(range.rowStart, range.rowEnd),
+            this.cells.length - 1
+          );
+        rs <= re;
+        rs++
+      ) {
+        for (
+          let cs = Math.min(range.columnStart, range.columnEnd),
+            ce = Math.min(
+              Math.max(range.columnStart, range.columnEnd),
+              this.cells[0].length - 1
+            );
+          cs <= ce;
+          cs++
+        ) {
+          if (this.cells[rs][cs].content && this.cells[rs][cs].content.value) {
+            this.cells[rs][cs].content.value = null;
+            this.drawCell(this.ctx, this.cells[rs][cs]);
+          }
+        }
+      }
+    }
+  }
+
   onKeyDown(event: KeyboardEvent) {
-    // console.log('keydown', event);
+    console.log('keydown', event);
     switch (event.code) {
       case KeyCode.Tab:
       case KeyCode.Enter:
@@ -2370,6 +2408,76 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       case KeyCode.PageDown:
         event.preventDefault();
         this.onKeyPageUpOrDown(event);
+        break;
+      case KeyCode.Delete:
+        this.deleteContent(this.activeArr);
+        break;
+      case KeyCode.Backspace:
+        this.resetCellPerspective(
+          this.cells[this.activeCellPos.row][this.activeCellPos.column]
+        );
+        this.editingCell = this.cells[this.activeCellPos.row][
+          this.activeCellPos.column
+        ];
+        this.editingCell.content.value = null;
+        this.state.isCellEdit = true;
+        break;
+      default:
+        break;
+    }
+  }
+
+  onKeyPress(event: KeyboardEvent) {
+    console.log('keypress', event);
+    event.preventDefault();
+    this.resetCellPerspective(
+      this.cells[this.activeCellPos.row][this.activeCellPos.column]
+    );
+    this.editingCell = this.cells[this.activeCellPos.row][
+      this.activeCellPos.column
+    ];
+    this.editingCell.content.value = event.key;
+    this.state.isCellEdit = true;
+  }
+
+  editCellCompelte(change = true) {
+    this.state.isCellEdit = false;
+    if (!change) {
+      this.editingCell.content.value = this.editingCell.content.previousValue;
+    } else {
+      this.editingCell.content.previousValue = this.editingCell.content.value;
+    }
+    this.drawCell(this.ctx, this.editingCell);
+    this.editingCell = null;
+    this.panel.nativeElement.focus();
+  }
+
+  onEditCellKeyDown(event: KeyboardEvent) {
+    switch (event.code) {
+      case KeyCode.Tab:
+      case KeyCode.Enter:
+        this.editCellCompelte();
+        event.preventDefault();
+        this.onKeyTabOrEnter(event);
+        break;
+      case KeyCode.ArrowUp:
+      case KeyCode.ArrowDown:
+        if (!this.editingCell.content || !this.editingCell.content.value) {
+          this.editCellCompelte();
+          event.preventDefault();
+          this.onKeyArrowUpOrDown(event);
+        }
+        break;
+      case KeyCode.ArrowLeft:
+      case KeyCode.ArrowRight:
+        if (!this.editingCell.content || !this.editingCell.content.value) {
+          this.editCellCompelte();
+          event.preventDefault();
+          this.onKeyArrowLeftOrRight(event);
+        }
+        break;
+      case KeyCode.Escape:
+        this.editCellCompelte(false);
         break;
       default:
         break;

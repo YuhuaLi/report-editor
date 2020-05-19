@@ -25,10 +25,13 @@
     overflow: hidden;
     pointer-events: none;
     .editCell {
+      font-size: 1rem;
+      padding: 0.25rem 0.5rem;
       position: absolute;
       box-sizing: border-box;
       pointer-events: auto;
-      border: 2px solid #096;
+      // border: 2px solid #096;
+      border: none;
       &:focus {
         outline: none;
       }
