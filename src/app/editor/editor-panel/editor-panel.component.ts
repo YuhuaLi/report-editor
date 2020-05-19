@@ -22,14 +22,12 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
 
   width = 0;
   height = 0;
-  workCells = [];
-  ViewOrigin = { x: 0, y: 0 };
   viewRowCount = 0;
   viewColumnCount = 0;
-  startRowIndex = 0;
-  startColumnIndex = 0;
-  offsetWidth = 0;
-  offsetHeight = 30;
+  offsetLeft = 0;
+  offsetTop = 30;
+  columns = [];
+  rows = [];
   cells: Cell[][] = [];
   viewCells: Cell[][] = [];
   editingCell: Cell;
@@ -59,6 +57,8 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     { rowStart: 1, columnStart: 1, rowEnd: 1, columnEnd: 1 },
   ];
   unActiveRange: CellRange;
+  resizeColumnCell: Cell;
+  resizeRowCell: Cell;
 
   ctx: CanvasRenderingContext2D;
   actionCtx: CanvasRenderingContext2D;
@@ -69,21 +69,30 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     this.width = this.elmentRef.nativeElement.offsetWidth;
     this.height = this.elmentRef.nativeElement.offsetHeight;
 
-    this.clientHeight = this.height - this.offsetHeight - Style.scrollBarWidth;
+    this.clientHeight = this.height - this.offsetTop - Style.scrollBarWidth;
   }
 
   ngAfterViewInit() {
     this.ctx = this.panel.nativeElement.getContext('2d');
     this.actionCtx = this.actionPanel.nativeElement.getContext('2d');
     this.viewRowCount =
-      Math.ceil((this.height - this.offsetHeight) / Style.cellHeight) + 2;
+      Math.ceil((this.height - this.offsetTop) / Style.cellHeight) + 2;
     this.ctx.font = `${Style.rulerCellFontWeight} ${Style.rulerCellFontSize}px ${Style.rulerCellFontFamily}`;
-    this.offsetWidth = Math.ceil(
+    this.offsetLeft = Math.ceil(
       this.ctx.measureText(`     ${this.viewRowCount}    `).width
     );
-    this.clientWidth = this.width - this.offsetWidth - Style.scrollBarWidth;
+    this.clientWidth = this.width - this.offsetLeft - Style.scrollBarWidth;
     this.viewColumnCount =
-      Math.ceil((this.width - this.offsetWidth) / Style.cellWidth) + 2;
+      Math.ceil((this.width - this.offsetLeft) / Style.cellWidth) + 2;
+
+    this.columns = Array.from({ length: this.viewColumnCount + 1 }, (v, k) => ({
+      x: k === 0 ? 0 : this.offsetLeft + (k - 1) * Style.cellWidth,
+      width: k === 0 ? this.offsetLeft : Style.cellWidth,
+    }));
+    this.rows = Array.from({ length: this.viewRowCount + 1 }, (v, k) => ({
+      y: k === 0 ? 0 : this.offsetTop + (k - 1) * Style.cellHeight,
+      height: k === 0 ? this.offsetTop : Style.cellHeight,
+    }));
 
     this.cells = Array.from({ length: this.viewRowCount + 1 }, (rv, rk) => {
       return Array.from({ length: this.viewColumnCount + 1 }, (cv, ck) =>
@@ -93,11 +102,11 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     this.scrollWidth =
       this.cells[0][this.cells[0].length - 1].x +
       this.cells[0][this.cells[0].length - 1].width -
-      this.offsetWidth;
+      this.offsetLeft;
     this.scrollHeight =
       this.cells[this.cells.length - 1][0].y +
       this.cells[this.cells.length - 1][0].height -
-      this.offsetHeight;
+      this.offsetTop;
 
     this.panel.nativeElement.width = this.width;
     this.panel.nativeElement.height = this.height;
@@ -110,19 +119,33 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
   }
 
   refreshView() {
-    let startRowIndex = this.cells.slice(1).findIndex((row, index) => {
-      return (
-        row[0].y - this.scrollTop <= this.offsetHeight &&
-        row[0].y + row[0].height - this.scrollTop >= this.offsetHeight
+    // let startRowIndex = this.cells.slice(1).findIndex((row, index) => {
+    //   return (
+    //     row[0].y - this.scrollTop <= this.offsetTop &&
+    //     row[0].y + row[0].height - this.scrollTop >= this.offsetTop
+    //   );
+    // });
+    let startRowIndex = this.rows
+      .slice(1)
+      .findIndex(
+        (row, index) =>
+          row.y - this.scrollTop <= this.offsetTop &&
+          row.y + row.height - this.scrollTop >= this.offsetTop
       );
-    });
     startRowIndex = startRowIndex ? startRowIndex : startRowIndex + 1;
-    let startColumnIndex = this.cells[0].slice(1).findIndex((cell, index) => {
-      return (
-        cell.x - this.scrollLeft <= this.offsetWidth &&
-        cell.x + cell.width - this.scrollLeft >= this.offsetWidth
+    // let startColumnIndex = this.cells[0].slice(1).findIndex((cell, index) => {
+    //   return (
+    //     cell.x - this.scrollLeft <= this.offsetLeft &&
+    //     cell.x + cell.width - this.scrollLeft >= this.offsetLeft
+    //   );
+    // });
+    let startColumnIndex = this.columns
+      .slice(1)
+      .findIndex(
+        (col, index) =>
+          col.x - this.scrollLeft <= this.offsetLeft &&
+          col.x + col.width - this.scrollLeft >= this.offsetLeft
       );
-    });
     startColumnIndex = startColumnIndex
       ? startColumnIndex
       : startColumnIndex + 1;
@@ -160,21 +183,72 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     const isXRuler = rk === 0;
     const isYRuler = ck === 0;
     return {
+      // cells: this.cells,
+      // offsetLeft: this.offsetLeft,
+      // offsetTop: this.offsetTop,
+      columns: this.columns,
+      rows: this.rows,
       position: { row: rk, column: ck },
-      x: ck === 0 ? 0 : this.offsetWidth + (ck - 1) * Style.cellWidth,
-      y: isXRuler ? 0 : this.offsetHeight + (rk - 1) * Style.cellHeight,
-      // get width() {
-      //   return isXRuler || isYRuler
-      //     ? isYRuler
-      //       ? this.offsetWidth
-      //       : Style.cellWidth
-      //     : (this.cells && this.cells[0] && this.cells[0][ck].width) ||
-      //         Style.cellWidth;
-      // },
-      width: isYRuler
-            ? this.offsetWidth
-            : Style.cellWidth,
-      height: isXRuler ? this.offsetHeight : Style.cellHeight,
+      // x: ck === 0 ? 0 : this.offsetLeft + (ck - 1) * Style.cellWidth,
+      get x() {
+        if (!this.columns[this.position.column]) {
+          this.columns[this.position.column] = {
+            x:
+              this.columns[this.position.column - 1].x +
+              this.columns[this.position.column - 1].width,
+          };
+        } else if (!('x' in this.columns[this.position.column])) {
+          this.columns[this.position.column].x =
+            this.columns[this.position.column - 1].x +
+            this.columns[this.position.column - 1].width;
+        }
+        return this.columns[this.position.column].x;
+      },
+      set x(val) {
+        this.columns[this.position.column].x = val;
+      },
+      get y() {
+        if (!this.rows[this.position.row]) {
+          this.rows[this.position.row] = {
+            y:
+              this.rows[this.position.row - 1].y +
+              this.rows[this.position.row - 1].height,
+          };
+        } else if (!('y' in this.rows[this.position.row])) {
+          this.rows[this.position.row].y =
+            this.rows[this.position.row - 1].y +
+            this.rows[this.position.row - 1].height;
+        }
+        return this.rows[this.position.row].y;
+      },
+      set y(val) {
+        this.rows[this.position.row].y = val;
+      },
+      // y: isXRuler ? 0 : this.offsetTop + (rk - 1) * Style.cellHeight,
+      // width: isYRuler ? this.offsetLeft : Style.cellWidth,
+      get width() {
+        if (!this.columns[this.position.column]) {
+          this.columns[this.position.column] = { width: Style.cellWidth };
+        } else if (!('width' in this.columns[this.position.column])) {
+          this.columns[this.position.column].width = Style.cellWidth;
+        }
+        return this.columns[this.position.column].width;
+      },
+      set width(val) {
+        this.columns[this.position.column].width = val;
+      },
+      // height: isXRuler ? this.offsetTop : Style.cellHeight,
+      get height() {
+        if (!this.rows[this.position.row]) {
+          this.rows[this.position.row] = { height: Style.cellHeight };
+        } else if (!('height' in this.rows[this.position.row])) {
+          this.rows[this.position.row].width = Style.cellHeight;
+        }
+        return this.rows[this.position.row].height;
+      },
+      set height(val) {
+        this.rows[this.position.row].height = val;
+      },
       type:
         isXRuler && isYRuler ? 'all' : isXRuler || isYRuler ? 'ruler' : 'cell',
       content: {
@@ -217,20 +291,20 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     ctx.strokeStyle = Style.scrollBarBorderColor;
     ctx.lineWidth = Style.scrollBarBorderWidth;
     ctx.fillRect(
-      this.offsetWidth,
+      this.offsetLeft,
       this.height - Style.scrollBarWidth,
       this.width - Style.scrollBarWidth,
       this.height
     );
     ctx.strokeRect(
-      this.offsetWidth,
+      this.offsetLeft,
       this.height - Style.scrollBarWidth,
       this.width - Style.scrollBarWidth,
       this.height
     );
     ctx.fillRect(
       this.width - Style.scrollBarWidth,
-      this.offsetHeight,
+      this.offsetTop,
       this.width,
       this.height - Style.scrollBarWidth
     );
@@ -259,7 +333,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     ctx.lineWidth = Style.scrollBarBorderWidth;
     ctx.strokeRect(
       this.width - Style.scrollBarWidth,
-      this.offsetHeight,
+      this.offsetTop,
       this.width,
       this.height - Style.scrollBarWidth
     );
@@ -401,8 +475,8 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       }
     }
     ctx.fillStyle = Style.cellBackgroundColor;
-    ctx.fillRect(0, 0, this.offsetWidth, this.offsetHeight);
-    ctx.strokeRect(0, 0, this.offsetWidth, this.offsetHeight);
+    ctx.fillRect(0, 0, this.offsetLeft, this.offsetTop);
+    ctx.strokeRect(0, 0, this.offsetLeft, this.offsetTop);
     ctx.restore();
   }
 
@@ -628,12 +702,12 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     }
     this.actionCtx.drawImage(
       canvas,
-      this.offsetWidth,
-      this.offsetHeight,
+      this.offsetLeft,
+      this.offsetTop,
       this.clientWidth,
       this.clientHeight,
-      this.offsetWidth,
-      this.offsetHeight,
+      this.offsetLeft,
+      this.offsetTop,
       this.clientWidth,
       this.clientHeight
     );
@@ -696,12 +770,12 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
 
   //     this.actionCtx.drawImage(
   //       canvas,
-  //       this.offsetWidth,
-  //       this.offsetHeight,
+  //       this.offsetLeft,
+  //       this.offsetTop,
   //       this.clientWidth,
   //       this.clientHeight,
-  //       this.offsetWidth,
-  //       this.offsetHeight,
+  //       this.offsetLeft,
+  //       this.offsetTop,
   //       this.clientWidth,
   //       this.clientHeight
   //     );
@@ -824,6 +898,10 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     this.state.isSelectScrollYThumb = false;
     this.state.isSelectRulerX = false;
     this.state.isSelectRulerY = false;
+    this.state.isResizeColumn = false;
+    this.state.isResizeRow = false;
+    this.resizeColumnCell = null;
+    this.resizeRowCell = null;
     this.drawScrollBar(this.ctx);
     this.mousePoint = null;
     if (
@@ -873,34 +951,81 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
 
   inCellsArea(x: number, y: number) {
     return (
-      inRange(x, this.offsetWidth, this.offsetWidth + this.clientWidth, true) &&
-      inRange(y, this.offsetHeight, this.offsetHeight + this.clientHeight, true)
+      inRange(x, this.offsetLeft, this.offsetLeft + this.clientWidth, true) &&
+      inRange(y, this.offsetTop, this.offsetTop + this.clientHeight, true)
     );
   }
 
   inRulerXArea(x: number, y: number) {
     return (
-      inRange(x, this.offsetWidth, this.width, true) &&
-      inRange(y, 0, this.offsetHeight, true)
+      inRange(x, this.offsetLeft, this.width, true) &&
+      inRange(y, 0, this.offsetTop, true)
     );
   }
+
+  inRulerXResizeGap(x: number, y: number) {
+    if (this.inRulerXArea(x, y)) {
+      for (let i = 1, len = this.columns.length; i < len; i++) {
+        if (
+          inRange(
+            x,
+            this.columns[i].x -
+              this.scrollLeft +
+              this.columns[i].width -
+              2 * Style.cellBorderWidth,
+            this.columns[i].x -
+              this.scrollLeft +
+              this.columns[i].width +
+              2 * Style.cellBorderWidth
+          )
+        ) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  inRulerYResizeGap(x: number, y: number) {
+    if (this.inRulerYArea(x, y)) {
+      for (let i = 1, len = this.rows.length; i < len; i++) {
+        if (
+          inRange(
+            y,
+            this.rows[i].y -
+              this.scrollTop +
+              this.rows[i].height -
+              2 * Style.cellBorderWidth,
+            this.rows[i].y -
+              this.scrollTop +
+              this.rows[i].height +
+              2 * Style.cellBorderWidth
+          )
+        ) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   inRulerYArea(x: number, y: number) {
     return (
-      inRange(x, 0, this.offsetWidth, true) &&
-      inRange(y, this.offsetHeight, this.height, true)
+      inRange(x, 0, this.offsetLeft, true) &&
+      inRange(y, this.offsetTop, this.height, true)
     );
   }
 
   inScrollYBarArea(x: number, y: number) {
     return (
-      inRange(x, this.offsetWidth + this.clientWidth, this.width, true) &&
-      inRange(y, this.offsetHeight, this.offsetHeight + this.clientHeight, true)
+      inRange(x, this.offsetLeft + this.clientWidth, this.width, true) &&
+      inRange(y, this.offsetTop, this.offsetTop + this.clientHeight, true)
     );
   }
   inScrollXBarArea(x: number, y: number) {
     return (
-      inRange(x, this.offsetWidth, this.width, true) &&
-      inRange(y, this.offsetHeight + this.clientHeight, this.height, true)
+      inRange(x, this.offsetLeft, this.width, true) &&
+      inRange(y, this.offsetTop + this.clientHeight, this.height, true)
     );
   }
 
@@ -925,7 +1050,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
 
   getScrollXThumbLeft(scrollXThumbHeight: number) {
     return (
-      this.offsetWidth +
+      this.offsetLeft +
       (this.scrollLeft * (this.clientWidth - scrollXThumbHeight)) /
         (this.scrollWidth - this.clientWidth)
     );
@@ -952,7 +1077,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
 
   getScrollYThumbTop(scrollYThumbHeight: number) {
     return (
-      this.offsetHeight +
+      this.offsetTop +
       (this.scrollTop * (this.clientHeight - scrollYThumbHeight)) /
         (this.scrollHeight - this.clientHeight)
     );
@@ -960,8 +1085,8 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
 
   inSelectAllArea(x: number, y: number) {
     return (
-      inRange(x, 0, this.offsetWidth, true) &&
-      inRange(y, 0, this.offsetHeight, true)
+      inRange(x, 0, this.offsetLeft, true) &&
+      inRange(y, 0, this.offsetTop, true)
     );
   }
 
@@ -1011,11 +1136,13 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
         if (
           inRange(
             event.x,
-            this.viewCells[0][i].x - this.scrollLeft,
             this.viewCells[0][i].x -
               this.scrollLeft +
-              this.viewCells[0][i].width,
-            true
+              (i ? Style.cellBorderWidth : 0),
+            this.viewCells[0][i].x -
+              this.scrollLeft +
+              this.viewCells[0][i].width -
+              (i ? 2 : 1) * Style.cellBorderWidth
           )
         ) {
           const isUnActive =
@@ -1062,6 +1189,21 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
           this.setActive();
           this.drawRuler(this.ctx);
           break;
+        } else if (
+          inRange(
+            event.x,
+            this.viewCells[0][i].x -
+              this.scrollLeft +
+              this.viewCells[0][i].width -
+              2 * Style.cellBorderWidth,
+            this.viewCells[0][i].x -
+              this.scrollLeft +
+              this.viewCells[0][i].width +
+              2 * Style.cellBorderWidth
+          )
+        ) {
+          this.resizeColumnCell = this.viewCells[0][i];
+          this.state.isResizeColumn = true;
         }
       }
     } else if (this.inRulerYArea(event.clientX, event.clientY)) {
@@ -1083,9 +1225,11 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
         if (
           inRange(
             event.clientY,
-            rowCells[i].y - this.scrollTop,
-            rowCells[i].y - this.scrollTop + rowCells[i].height,
-            true
+            rowCells[i].y - this.scrollTop + (i ? Style.cellBorderWidth : 0),
+            rowCells[i].y -
+              this.scrollTop +
+              rowCells[i].height -
+              (i ? 2 : 1) * Style.cellBorderWidth
           )
         ) {
           const isUnActive =
@@ -1132,6 +1276,21 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
           this.setActive();
           this.drawRuler(this.ctx);
           break;
+        } else if (
+          inRange(
+            event.clientY,
+            rowCells[i].y -
+              this.scrollTop +
+              rowCells[i].height -
+              2 * Style.cellBorderWidth,
+            rowCells[i].y -
+              this.scrollTop +
+              rowCells[i].height +
+              2 * Style.cellBorderWidth
+          )
+        ) {
+          this.resizeRowCell = rowCells[i];
+          this.state.isResizeRow = true;
         }
       }
     } else if (this.inScrollXBarArea(event.clientX, event.clientY)) {
@@ -1141,7 +1300,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       } else if (
         inRange(
           event.clientX,
-          this.offsetWidth,
+          this.offsetLeft,
           this.getScrollXThumbLeft(this.getScrollXThumbHeight())
         )
       ) {
@@ -1160,7 +1319,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       } else if (
         inRange(
           event.clientY,
-          this.offsetHeight,
+          this.offsetTop,
           this.getScrollYThumbTop(this.getScrollYThumbHeight())
         )
       ) {
@@ -1278,9 +1437,26 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       (!this.inCellsArea(event.clientX, event.clientY) &&
         !this.state.isSelectCell) ||
       this.state.isSelectScrollYThumb ||
-      this.state.isSelectScrollXThumb
+      this.state.isSelectScrollXThumb ||
+      this.state.isResizeColumn
     ) {
-      this.panel.nativeElement.style.cursor = 'default';
+      if (
+        this.state.isResizeColumn ||
+        (!this.state.isSelectRulerX &&
+          !this.state.isSelectRulerY &&
+          this.inRulerXResizeGap(event.clientX, event.clientY))
+      ) {
+        this.panel.nativeElement.style.cursor = 'col-resize';
+      } else if (
+        this.state.isResizeRow ||
+        (!this.state.isSelectRulerX &&
+          !this.state.isSelectRulerY &&
+          this.inRulerYResizeGap(event.clientX, event.clientY))
+      ) {
+        this.panel.nativeElement.style.cursor = 'row-resize';
+      } else {
+        this.panel.nativeElement.style.cursor = 'default';
+      }
     } else {
       this.panel.nativeElement.style.cursor = 'cell';
     }
@@ -1322,6 +1498,16 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
           range = this.calcUnActiveRulerX(event.clientX, event.clientY);
         } else if (this.state.unSelectRulerY) {
           range = this.calcUnActiveRulerY(event.clientX, event.clientY);
+        } else if (this.state.isResizeColumn) {
+          this.resizeColumn(
+            this.resizeColumnCell.position.column,
+            event.clientX - this.mousePoint.x
+          );
+        } else if (this.state.isResizeRow) {
+          this.resizeRow(
+            this.resizeRowCell.position.row,
+            event.clientY - this.mousePoint.y
+          );
         }
         if (range) {
           if (
@@ -1346,15 +1532,35 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     this.isTicking = true;
   }
 
+  resizeColumn(column: number, deltaWidth: number) {
+    this.columns[column].width += deltaWidth;
+    this.columns.forEach((col, index) => {
+      if (index > column) {
+        col.x += deltaWidth;
+      }
+    });
+    this.refreshView();
+  }
+
+  resizeRow(row: number, deltaHeight: number) {
+    this.rows[row].height += deltaHeight;
+    this.rows.forEach((r, i) => {
+      if (i > row) {
+        r.y += deltaHeight;
+      }
+    });
+    this.refreshView();
+  }
+
   autoScroll(x: number, y: number) {
     if (
       x === this.mousePoint.x &&
       y === this.mousePoint.y &&
       this.state.isSelectCell
     ) {
-      if (y > this.offsetHeight + this.clientHeight || y < this.offsetHeight) {
+      if (y > this.offsetTop + this.clientHeight || y < this.offsetTop) {
         this.scrollY(
-          y < this.offsetHeight ? -1 * Style.cellHeight : Style.cellHeight
+          y < this.offsetTop ? -1 * Style.cellHeight : Style.cellHeight
         );
         const range = this.calcActive(x, y);
         if (range) {
@@ -1363,9 +1569,9 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
           this.setActive();
         }
       }
-      if (x > this.offsetWidth + this.clientWidth || x < this.offsetWidth) {
+      if (x > this.offsetLeft + this.clientWidth || x < this.offsetLeft) {
         this.scrollX(
-          x < this.offsetWidth ? -1 * Style.cellWidth : Style.cellWidth
+          x < this.offsetLeft ? -1 * Style.cellWidth : Style.cellWidth
         );
         const range = this.calcActive(this.mousePoint.x, this.mousePoint.y);
         if (range) {
@@ -1791,6 +1997,10 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     this.state.isSelectScrollXThumb = false;
     this.state.isSelectRulerX = false;
     this.state.isSelectRulerY = false;
+    this.state.isResizeColumn = false;
+    this.state.isResizeRow = false;
+    this.resizeColumnCell = null;
+    this.resizeRowCell = null;
     this.mousePoint = null;
     if (
       this.state.unSelectCell ||
@@ -1824,7 +2034,13 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
         i < len;
         i++
       ) {
-        const columnLength = this.cells[0].length;
+        const columnLength = this.columns.length;
+        this.columns.push({
+          x:
+            this.columns[columnLength - 1].x +
+            this.columns[columnLength - 1].width,
+          width: Style.cellWidth,
+        });
         this.cells.forEach((row, rk) =>
           row.push(this.createCell(rk, columnLength))
         );
@@ -1832,7 +2048,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       this.scrollWidth =
         this.cells[0][this.cells[0].length - 1].x +
         this.cells[0][this.cells[0].length - 1].width -
-        this.offsetWidth;
+        this.offsetLeft;
       // this.scrollLeft = this.scrollWidth - this.clientWidth - Style.cellWidth;
     } else if (this.scrollLeft <= 0) {
       this.scrollLeft = 0;
@@ -1860,6 +2076,12 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
         i < len;
         i++
       ) {
+        this.rows.push({
+          y:
+            this.rows[this.rows.length - 1].y +
+            this.rows[this.rows.length - 1].height,
+          height: Style.cellHeight,
+        });
         this.cells.push(
           Array.from({ length: this.cells[0].length }).map((cv, ck) =>
             this.createCell(this.cells.length, ck)
@@ -1869,7 +2091,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       this.scrollHeight =
         this.cells[this.cells.length - 1][0].y +
         this.cells[this.cells.length - 1][0].height -
-        this.offsetHeight;
+        this.offsetTop;
       // this.scrollTop = this.scrollHeight - this.clientHeight - Style.cellHeight;
     } else if (this.scrollTop <= 0) {
       this.scrollTop = 0;
@@ -2218,32 +2440,32 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
   }
 
   resetCellPerspective(cell: Cell) {
-    if (cell.x - this.scrollLeft < this.offsetWidth) {
-      this.scrollX(cell.x - this.scrollLeft - this.offsetWidth, false);
+    if (cell.x - this.scrollLeft < this.offsetLeft) {
+      this.scrollX(cell.x - this.scrollLeft - this.offsetLeft, false);
     } else if (
       cell.x + cell.width - this.scrollLeft >
-      this.clientWidth + this.offsetWidth
+      this.clientWidth + this.offsetLeft
     ) {
       this.scrollX(
         cell.x -
           this.scrollLeft -
           this.clientWidth -
-          this.offsetWidth +
+          this.offsetLeft +
           cell.width,
         false
       );
     }
-    if (cell.y - this.scrollTop < this.offsetHeight) {
-      this.scrollY(cell.y - this.scrollTop - this.offsetHeight, false);
+    if (cell.y - this.scrollTop < this.offsetTop) {
+      this.scrollY(cell.y - this.scrollTop - this.offsetTop, false);
     } else if (
       cell.y + cell.height - this.scrollTop >
-      this.clientHeight + this.offsetHeight
+      this.clientHeight + this.offsetTop
     ) {
       this.scrollY(
         cell.y -
           this.scrollTop -
           this.clientHeight -
-          this.offsetHeight +
+          this.offsetTop +
           cell.height,
         false
       );
@@ -2289,7 +2511,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     let posY =
       this.cells[this.activeCellPos.row][this.activeCellPos.column].y +
       (event.code === KeyCode.PageDown ? 1 : -1) * this.clientHeight;
-    posY = posY < this.offsetHeight ? this.offsetHeight : posY;
+    posY = posY < this.offsetTop ? this.offsetTop : posY;
     let i = this.activeCellPos.row;
     while (true) {
       const [y, height] = this.cells[i]
@@ -2389,6 +2611,8 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       case KeyCode.Enter:
         event.preventDefault();
         this.onKeyTabOrEnter(event);
+        this.cells[0][1].width = 200;
+        this.refreshView();
         break;
       case KeyCode.ArrowUp:
       case KeyCode.ArrowDown:

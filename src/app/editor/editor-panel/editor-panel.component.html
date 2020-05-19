@@ -21,8 +21,8 @@
     <div
       class="mask"
       [ngStyle]="{
-        'left.px': offsetWidth,
-        'top.px': offsetHeight,
+        'left.px': offsetLeft,
+        'top.px': offsetTop,
         'right.px': scrollBarWidth,
         'bottom.px': scrollBarWidth
       }"
@@ -34,8 +34,8 @@
           type="text"
           class="editCell"
           [ngStyle]="{
-            'left.px': editingCell?.x - scrollLeft - this.offsetWidth + 1,
-            'top.px': editingCell?.y - scrollTop - offsetHeight + 1,
+            'left.px': editingCell?.x - scrollLeft - offsetLeft + 1,
+            'top.px': editingCell?.y - scrollTop - offsetTop + 1,
             'width.px': editingCell?.width - 2,
             'height.px': editingCell?.height - 2
           }"

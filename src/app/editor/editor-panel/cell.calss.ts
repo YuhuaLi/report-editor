@@ -1,4 +1,9 @@
 export default class Cell {
+  // cells: Cell[][];
+  // offsetLeft: number;
+  // offsetTop: number;
+  columns?: { x?: number; width?: number }[];
+  rows?: { y?: number; height?: number }[];
   x: number;
   y: number;
   width: number;
