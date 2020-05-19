@@ -5,6 +5,7 @@ import {
   ViewChild,
   ElementRef,
   AfterViewInit,
+  HostListener,
 } from '@angular/core';
 import Cell from './cell.calss';
 import { inRange } from 'src/app/core/decorator/utils/function';
@@ -64,6 +65,21 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
   actionCtx: CanvasRenderingContext2D;
 
   constructor(private elmentRef: ElementRef) {}
+
+  @HostListener('window:resize', ['$event'])
+  onResize(event) {
+    console.log('resize');
+    this.width = this.elmentRef.nativeElement.offsetWidth;
+    this.height = this.elmentRef.nativeElement.offsetHeight;
+    this.clientWidth = this.width - this.offsetLeft - Style.scrollBarWidth;
+    this.clientHeight = this.height - this.offsetTop - Style.scrollBarWidth;
+    this.panel.nativeElement.width = this.width;
+    this.panel.nativeElement.height = this.height;
+    this.actionPanel.nativeElement.width = this.width;
+    this.actionPanel.nativeElement.height = this.height;
+
+    this.refreshView();
+  }
 
   ngOnInit(): void {
     this.width = this.elmentRef.nativeElement.offsetWidth;
@@ -1093,7 +1109,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
   onMouseDown(event: MouseEvent) {
     this.panel.nativeElement.focus();
     event.preventDefault();
-    console.log('mousedown', event)
+    console.log('mousedown', event);
 
     if (this.state.isCellEdit) {
       this.editCellCompelte();
@@ -1300,7 +1316,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
               2 * Style.cellBorderWidth
           )
         ) {
-          console.log('dblclick',isDblClick, event)
+          console.log('dblclick', isDblClick, event);
           if (isDblClick) {
             this.resizeRow(
               rowCells[i].position.row,

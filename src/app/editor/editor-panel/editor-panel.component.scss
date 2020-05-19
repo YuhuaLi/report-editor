@@ -1,6 +1,7 @@
 :host {
   .panel-wrapper {
     position: relative;
+    overflow: hidden;
   }
 
   canvas {
