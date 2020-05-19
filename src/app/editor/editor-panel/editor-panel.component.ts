@@ -903,7 +903,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     this.resizeColumnCell = null;
     this.resizeRowCell = null;
     this.drawScrollBar(this.ctx);
-    this.mousePoint = null;
+    // this.mousePoint = null;
     if (
       this.state.unSelectCell ||
       this.state.unSelectRulerX ||
@@ -1091,8 +1091,9 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
   }
 
   onMouseDown(event: MouseEvent) {
-    event.preventDefault();
     this.panel.nativeElement.focus();
+    event.preventDefault();
+    console.log('mousedown', event)
 
     if (this.state.isCellEdit) {
       this.editCellCompelte();
@@ -1102,7 +1103,16 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
       event.returnValue = false;
       return;
     }
-    this.mousePoint = { x: event.clientX, y: event.clientY };
+    const currentTime = new Date().getTime();
+    let isDblClick = false;
+    if (currentTime - this.mousePoint.lastModifyTime < 500) {
+      isDblClick = true;
+    }
+    this.mousePoint = {
+      x: event.clientX,
+      y: event.clientY,
+      lastModifyTime: new Date().getTime(),
+    };
     if (this.inSelectAllArea(event.clientX, event.clientY)) {
       console.log('all');
       this.activeArr = [
@@ -1253,6 +1263,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
               columnEnd: Infinity,
             };
           } else {
+            console.log(true);
             this.state.isSelectRulerY = true;
             this.activeArr.push({
               rowStart: event.shiftKey
@@ -1289,8 +1300,17 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
               2 * Style.cellBorderWidth
           )
         ) {
-          this.resizeRowCell = rowCells[i];
-          this.state.isResizeRow = true;
+          console.log('dblclick',isDblClick, event)
+          if (isDblClick) {
+            this.resizeRow(
+              rowCells[i].position.row,
+              Style.cellHeight - rowCells[i].height
+            );
+            return;
+          } else {
+            this.resizeRowCell = rowCells[i];
+            this.state.isResizeRow = true;
+          }
         }
       }
     } else if (this.inScrollXBarArea(event.clientX, event.clientY)) {
@@ -2001,7 +2021,7 @@ export class EditorPanelComponent implements OnInit, AfterViewInit {
     this.state.isResizeRow = false;
     this.resizeColumnCell = null;
     this.resizeRowCell = null;
-    this.mousePoint = null;
+    // this.mousePoint = null;
     if (
       this.state.unSelectCell ||
       this.state.unSelectRulerX ||
