@@ -18,6 +18,7 @@ export const Style = {
   rulerCellFontFamily: 'sans-serif',
   rulerCellBorderColor: '#aeaeae',
   rulerCellBorderWidth: 1,
+  rulerResizeGapWidth: 4,
   cellBackgroundColor: '#fff',
   cellColor: '#000',
   cellFontSize: 14,
