@@ -1,4 +1,4 @@
-export default class Cell {
+export class Cell {
   // cells: Cell[][];
   // offsetLeft: number;
   // offsetTop: number;
@@ -21,4 +21,9 @@ export default class Cell {
   type: string;
   borderWidth: number;
   borderColor: string;
+  rowSpan: number;
+  colSpan: number;
+  isCombined?: boolean;
+  combineCell?: Cell;
+  hidden?: boolean;
 }

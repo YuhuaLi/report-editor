@@ -1,3 +1,4 @@
+<button type="button" (click)="toggleCombine()">combine</button>
 <div class="panel panel-wrapper">
   <canvas
     tabindex="0"
@@ -33,6 +34,7 @@
           name="editCell"
           type="text"
           class="editCell"
+          autocomplete="off"
           [ngStyle]="{
             'left.px': editingCell?.x - scrollLeft - offsetLeft + 1,
             'top.px': editingCell?.y - scrollTop - offsetTop + 1,

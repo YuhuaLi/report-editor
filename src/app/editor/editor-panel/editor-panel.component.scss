@@ -2,6 +2,7 @@
   .panel-wrapper {
     position: relative;
     overflow: hidden;
+    height: calc(100% - 100px);
   }
 
   canvas {
