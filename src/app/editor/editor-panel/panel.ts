@@ -562,7 +562,6 @@ export class Panel {
         y + height / 2
         // width - 2 * cell.borderWidth
       );
-      
     }
     if (clip) {
       ctx.drawImage(cellCtx.canvas, x, y, width, height, x, y, width, height);
@@ -1599,16 +1598,16 @@ export class Panel {
               const activeCell = this.cells[m][n].isCombined
                 ? this.cells[m][n].combineCell
                 : this.cells[m][n];
-              if (activeCell.position.row < rStart) {
+              if (activeCell.position.row < rowStart) {
                 rowStart = activeCell.position.row;
               }
-              if (activeCell.position.row + activeCell.rowSpan - 1 > rEnd) {
+              if (activeCell.position.row + activeCell.rowSpan - 1 > rowEnd) {
                 rowEnd = activeCell.position.row + activeCell.rowSpan - 1;
               }
-              if (activeCell.position.column < cStart) {
+              if (activeCell.position.column < columnStart) {
                 columnStart = activeCell.position.column;
               }
-              if (activeCell.position.column + activeCell.colSpan - 1 > cEnd) {
+              if (activeCell.position.column + activeCell.colSpan - 1 > columnEnd) {
                 columnEnd = activeCell.position.column + activeCell.colSpan - 1;
               }
             }
@@ -1658,18 +1657,18 @@ export class Panel {
                 const activeCell = this.cells[m][n].isCombined
                   ? this.cells[m][n].combineCell
                   : this.cells[m][n];
-                if (activeCell.position.row < rStart) {
+                if (activeCell.position.row < rowStart) {
                   rowStart = activeCell.position.row;
                 }
-                if (activeCell.position.row + activeCell.rowSpan - 1 > rEnd) {
+                if (activeCell.position.row + activeCell.rowSpan - 1 > rowEnd) {
                   rowEnd = activeCell.position.row + activeCell.rowSpan - 1;
                 }
-                if (activeCell.position.column < cStart) {
+                if (activeCell.position.column < columnStart) {
                   columnStart = activeCell.position.column;
                 }
                 if (
                   activeCell.position.column + activeCell.colSpan - 1 >
-                  cEnd
+                  columnEnd
                 ) {
                   columnEnd =
                     activeCell.position.column + activeCell.colSpan - 1;
