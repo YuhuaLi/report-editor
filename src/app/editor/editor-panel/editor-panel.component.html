@@ -1,4 +1,11 @@
 <button type="button" (click)="toggleCombine()">combine</button>
+<button
+  type="button"
+  (click)="toggleBold()"
+  [ngStyle]="{ 'font-weight': activeCell?.fontWeight || 'normal' }"
+>
+  bold
+</button>
 <div class="panel panel-wrapper">
   <canvas
     tabindex="0"
