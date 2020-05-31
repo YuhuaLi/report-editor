@@ -1580,65 +1580,14 @@ export class Panel {
           ? this.viewCells[i][j].combineCell
           : this.viewCells[i][j];
         if (this.inCellArea(x, y, cell)) {
-          // const rowReverse = cell.position.row < this.activeCellPos.row;
-          // const columnReverse =
-          //   cell.position.column < this.activeCellPos.column;
-          // const [rStart, rEnd, cStart, cEnd] = [
-          //   Math.min(this.activeCellPos.row, cell.position.row),
-          //   Math.max(
-          //     this.activeCellPos.row,
-          //     cell.position.row + cell.rowSpan - 1
-          //   ),
-          //   Math.min(this.activeCellPos.column, cell.position.column),
-          //   Math.max(
-          //     this.activeCellPos.column,
-          //     cell.position.column + cell.colSpan - 1
-          //   ),
-          // ];
-          // let [rowStart, rowEnd, columnStart, columnEnd] = [
-          //   rStart,
-          //   rEnd,
-          //   cStart,
-          //   cEnd,
-          // ];
-          // for (let m = rStart; m <= rEnd; m++) {
-          //   for (let n = cStart; n <= cEnd; n++) {
-          //     const activeCell = this.cells[m][n].isCombined
-          //       ? this.cells[m][n].combineCell
-          //       : this.cells[m][n];
-          //     if (activeCell.position.row < rowStart) {
-          //       rowStart = activeCell.position.row;
-          //     }
-          //     if (activeCell.position.row + activeCell.rowSpan - 1 > rowEnd) {
-          //       rowEnd = activeCell.position.row + activeCell.rowSpan - 1;
-          //     }
-          //     if (activeCell.position.column < columnStart) {
-          //       columnStart = activeCell.position.column;
-          //     }
-          //     if (
-          //       activeCell.position.column + activeCell.colSpan - 1 >
-          //       columnEnd
-          //     ) {
-          //       columnEnd = activeCell.position.column + activeCell.colSpan - 1;
-          //     }
-          //   }
-          // }
-          // const range =  {
-          //     rowStart: rowReverse ? rowEnd : rowStart,
-          //     rowEnd: rowReverse ? rowStart : rowEnd,
-          //     columnStart: columnReverse ? columnEnd : columnStart,
-          //     columnEnd: columnReverse ? columnStart : columnEnd,
-          //   };
-          const range = {rowStart: this.activeCellPos.row, rowEnd: cell.position.row, columnStart: this.activeCellPos.column, columnEnd: cell.position.column}
-          console.log(range)
+          const range = {
+            rowStart: this.activeCellPos.row,
+            rowEnd: cell.position.row,
+            columnStart: this.activeCellPos.column,
+            columnEnd: cell.position.column,
+          };
           this.recalcRange(range);
           return range;
-          // return {
-          //   rowStart: rowReverse ? rowEnd : rowStart,
-          //   rowEnd: rowReverse ? rowStart : rowEnd,
-          //   columnStart: columnReverse ? columnEnd : columnStart,
-          //   columnEnd: columnReverse ? columnStart : columnEnd,
-          // };
         }
       }
     }
@@ -1651,58 +1600,14 @@ export class Panel {
           ? this.viewCells[i][j].combineCell
           : this.viewCells[i][j];
         if (this.inCellArea(x, y, cell)) {
-          const rowReverse = cell.position.row < this.unActiveCellPos.row;
-          const columnReverse =
-            cell.position.column < this.unActiveCellPos.column;
-          if (this.inCellArea(x, y, cell)) {
-            const [rStart, rEnd, cStart, cEnd] = [
-              Math.min(this.unActiveCellPos.row, cell.position.row),
-              Math.max(
-                this.unActiveCellPos.row,
-                cell.position.row + cell.rowSpan - 1
-              ),
-              Math.min(this.unActiveCellPos.column, cell.position.column),
-              Math.max(
-                this.unActiveCellPos.column,
-                cell.position.column + cell.colSpan - 1
-              ),
-            ];
-            let [rowStart, rowEnd, columnStart, columnEnd] = [
-              rStart,
-              rEnd,
-              cStart,
-              cEnd,
-            ];
-            for (let m = rStart; m <= rEnd; m++) {
-              for (let n = cStart; n <= cEnd; n++) {
-                const activeCell = this.cells[m][n].isCombined
-                  ? this.cells[m][n].combineCell
-                  : this.cells[m][n];
-                if (activeCell.position.row < rowStart) {
-                  rowStart = activeCell.position.row;
-                }
-                if (activeCell.position.row + activeCell.rowSpan - 1 > rowEnd) {
-                  rowEnd = activeCell.position.row + activeCell.rowSpan - 1;
-                }
-                if (activeCell.position.column < columnStart) {
-                  columnStart = activeCell.position.column;
-                }
-                if (
-                  activeCell.position.column + activeCell.colSpan - 1 >
-                  columnEnd
-                ) {
-                  columnEnd =
-                    activeCell.position.column + activeCell.colSpan - 1;
-                }
-              }
-            }
-            return {
-              rowStart: rowReverse ? rowEnd : rowStart,
-              rowEnd: rowReverse ? rowStart : rowEnd,
-              columnStart: columnReverse ? columnEnd : columnStart,
-              columnEnd: columnReverse ? columnStart : columnEnd,
-            };
-          }
+          const range = {
+            rowStart: this.unActiveCellPos.row,
+            rowEnd: cell.position.row,
+            columnStart: this.unActiveCellPos.column,
+            columnEnd: cell.position.column,
+          };
+          this.recalcRange(range);
+          return range;
         }
       }
     }
@@ -2961,11 +2866,11 @@ export class Panel {
             if (cell.position.row + cell.rowSpan > rEnd) {
               rowStart = cell.position.row;
               rowEnd = cell.position.row + cell.rowSpan;
-              needReCalc = true;
             } else {
               rowEnd = cell.position.row + cell.rowSpan;
             }
           }
+          needReCalc = true;
         }
         if (cell.position.row + cell.rowSpan - 1 > rEnd) {
           if (isExpand) {
@@ -2976,11 +2881,11 @@ export class Panel {
             if (cell.position.row - 1 < rStart) {
               rowStart = cell.position.row + cell.rowSpan - 1;
               rowEnd = cell.position.row - 1;
-              needReCalc = true;
             } else {
               rowEnd = cell.position.row - 1;
             }
           }
+          needReCalc = true;
         }
         if (cell.position.column < cStart) {
           if (isExpand) {
@@ -2991,11 +2896,11 @@ export class Panel {
             if (cell.position.column + cell.colSpan > cEnd) {
               columnStart = cell.position.column;
               columnEnd = cell.position.column + cell.colSpan;
-              needReCalc = true;
             } else {
               columnEnd = cell.position.column + cell.colSpan;
             }
           }
+          needReCalc = true;
         }
         if (cell.position.column + cell.colSpan - 1 > cEnd) {
           if (isExpand) {
@@ -3006,11 +2911,11 @@ export class Panel {
             if (cell.position.column - 1 < cStart) {
               columnStart = cell.position.column + cell.colSpan - 1;
               columnEnd = cell.position.column - 1;
-              needReCalc = true;
             } else {
               columnEnd = cell.position.column - 1;
             }
           }
+          needReCalc = true;
         }
       }
     }
