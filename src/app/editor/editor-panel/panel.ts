@@ -40,9 +40,11 @@ export class Panel {
   }
   set activeCellPos(val) {
     this._activeCellPos = val;
-    this.activeCell = this.cells[val.row][val.column].isCombined
-      ? this.cells[val.row][val.column].combineCell
-      : this.cells[val.row][val.column];
+    if (val) {
+      this.activeCell = this.cells[val.row][val.column].isCombined
+        ? this.cells[val.row][val.column].combineCell
+        : this.cells[val.row][val.column];
+    }
   }
 
   activeArr: CellRange[] = [
@@ -142,16 +144,20 @@ export class Panel {
         ]),
     ];
 
+    this.ctx.clearRect(0, 0, this.width, this.height);
+
     const canvas = document.createElement('canvas');
     canvas.width = this.width;
     canvas.height = this.height;
     const ctx = canvas.getContext('2d');
     this.setActive();
-    this.drawPanel(ctx);
-    this.drawRuler(ctx);
-    this.drawScrollBar(ctx);
-    this.ctx.clearRect(0, 0, this.width, this.height);
-    this.ctx.drawImage(canvas, 0, 0);
+    // this.drawPanel(ctx);
+    // this.drawRuler(ctx);
+    // this.drawScrollBar(ctx);
+    this.drawPanel(this.ctx);
+    this.drawRuler(this.ctx);
+    this.drawScrollBar(this.ctx);
+    // this.ctx.drawImage(canvas, 0, 0);
   }
 
   createCell(rk: number, ck: number): Cell {
@@ -499,7 +505,7 @@ export class Panel {
   }
 
   drawPanel(ctx: CanvasRenderingContext2D) {
-    for (let i = 0, rLen = this.viewCells.length; i < rLen; i++) {
+    for (let i = this.viewCells.length - 1; i >= 0; i--) {
       for (let j = 0, cLen = this.viewCells[i].length; j < cLen; j++) {
         this.drawCell(ctx, this.viewCells[i][j]);
       }
@@ -843,13 +849,11 @@ export class Panel {
             this.columns[i].x -
               this.scrollLeft +
               this.columns[i].width -
-              (this.columns[i].width ? Style.rulerResizeGapWidth : 0),
+              Style.rulerResizeGapWidth,
             this.columns[i].x -
               this.scrollLeft +
               this.columns[i].width +
-              (this.columns[i + 1] && this.columns[i + 1].width
-                ? Style.rulerResizeGapWidth
-                : 0)
+              Style.rulerResizeGapWidth
           )
         ) {
           return true;
@@ -868,11 +872,11 @@ export class Panel {
             this.rows[i].y -
               this.scrollTop +
               this.rows[i].height -
-              2 * Style.cellBorderWidth,
+              Style.rulerResizeGapWidth,
             this.rows[i].y -
               this.scrollTop +
               this.rows[i].height +
-              2 * Style.cellBorderWidth
+              Style.rulerResizeGapWidth
           )
         ) {
           return true;
@@ -1005,7 +1009,7 @@ export class Panel {
       // this.drawScrollBar(ctx);
     } else if (this.inRulerXArea(event.offsetX, event.offsetY)) {
       console.log('rulerx');
-      for (let i = 1, len = this.viewCells[0].length; i < len; i++) {
+      for (let i = 1, len = this.viewCells[0].length - 1; i < len; i++) {
         if (
           this.viewCells[0][i].width >
             (i === 1 ? 1 : 2) * Style.rulerResizeGapWidth &&
@@ -1013,14 +1017,12 @@ export class Panel {
             event.x,
             this.viewCells[0][i].x -
               this.scrollLeft +
-              (i === 1 || !this.viewCells[0][i].width
-                ? 0
-                : Style.rulerResizeGapWidth),
+              (i === 1 ? 0 : Style.rulerResizeGapWidth),
             this.viewCells[0][i].x -
               this.scrollLeft +
               this.viewCells[0][i].width -
-              (i === 1 ? 1 : this.viewCells[0][i].width ? 2 : 0) *
-                Style.rulerResizeGapWidth
+              Style.rulerResizeGapWidth,
+            true
           )
         ) {
           const isUnActive =
@@ -1068,20 +1070,30 @@ export class Panel {
           this.drawRuler(this.ctx);
           break;
         } else if (
-          this.viewCells[0][i].width <=
-            (i === 1 ? 1 : 2) * Style.rulerResizeGapWidth ||
           inRange(
             event.offsetX,
             this.viewCells[0][i].x -
               this.scrollLeft +
               this.viewCells[0][i].width -
-              (this.viewCells[0][i].width ? Style.rulerResizeGapWidth : 0),
+              Style.rulerResizeGapWidth <
+              this.viewCells[0][i].x
+              ? this.viewCells[0][i].x
+              : this.viewCells[0][i].x -
+                  this.scrollLeft +
+                  this.viewCells[0][i].width -
+                  Style.rulerResizeGapWidth,
             this.viewCells[0][i].x -
               this.scrollLeft +
               this.viewCells[0][i].width +
-              (this.viewCells[0][i + 1] && this.viewCells[0][i + 1].width
-                ? Style.rulerResizeGapWidth
-                : 0)
+              Style.rulerResizeGapWidth >
+              this.viewCells[0][i + 1].x + this.viewCells[0][i + 1].width
+              ? this.viewCells[0][i + 1].width
+                ? this.viewCells[0][i + 1].x + this.viewCells[0][i + 1].width
+                : this.viewCells[0][i].x + this.viewCells[0][i].width
+              : this.viewCells[0][i].x -
+                  this.scrollLeft +
+                  this.viewCells[0][i].width +
+                  Style.rulerResizeGapWidth
           )
         ) {
           this.resizeColumnCell = this.viewCells[0][i];
@@ -1090,21 +1102,21 @@ export class Panel {
         }
       }
     } else if (this.inRulerYArea(event.offsetX, event.offsetY)) {
-      console.log('rulery');
+      console.log('rulery', event);
       const rowCells = this.viewCells.map((row) => row[0]);
-      for (let i = 1, len = rowCells.length; i < len; i++) {
+      for (let i = 1, len = rowCells.length - 1; i < len; i++) {
         if (
           rowCells[i].height > (i === 1 ? 1 : 2) * Style.rulerResizeGapWidth &&
           inRange(
             event.offsetY,
             rowCells[i].y -
               this.scrollTop +
-              (i === 1 || !rowCells[i].width ? 0 : Style.rulerResizeGapWidth),
+              (i === 1 ? 0 : Style.rulerResizeGapWidth),
             rowCells[i].y -
               this.scrollTop +
               rowCells[i].height -
-              (i === 1 ? 1 : rowCells[i].width ? 2 : 0) *
-                Style.rulerResizeGapWidth
+              Style.rulerResizeGapWidth,
+            true
           )
         ) {
           const isUnActive =
@@ -1152,19 +1164,30 @@ export class Panel {
           this.drawRuler(this.ctx);
           break;
         } else if (
-          rowCells[i].height <= (i === 1 ? 1 : 2) * Style.rulerResizeGapWidth ||
           inRange(
             event.offsetY,
             rowCells[i].y -
               this.scrollTop +
               rowCells[i].height -
-              (rowCells[i].height ? Style.rulerResizeGapWidth : 0),
+              Style.rulerResizeGapWidth <
+              rowCells[i].y
+              ? rowCells[i].y
+              : rowCells[i].y -
+                  this.scrollTop +
+                  rowCells[i].height -
+                  Style.rulerResizeGapWidth,
             rowCells[i].y -
               this.scrollTop +
               rowCells[i].height +
-              (rowCells[i + 1] && rowCells[i + 1].height
-                ? Style.rulerResizeGapWidth
-                : 0)
+              Style.rulerResizeGapWidth >
+              rowCells[i + 1].y + rowCells[i + 1].height
+              ? rowCells[i + 1].height
+                ? rowCells[i + 1].y + rowCells[i + 1].height
+                : rowCells[i].y + rowCells[i].height
+              : rowCells[i].y -
+                  this.scrollTop +
+                  rowCells[i].height +
+                  Style.rulerResizeGapWidth
           )
         ) {
           console.log('dblclick', isDblClick, event);
@@ -1317,7 +1340,8 @@ export class Panel {
         !this.state.isSelectCell) ||
       this.state.isSelectScrollYThumb ||
       this.state.isSelectScrollXThumb ||
-      this.state.isResizeColumn
+      this.state.isResizeColumn ||
+      this.state.isResizeRow
     ) {
       if (
         this.state.isResizeColumn ||
@@ -1425,8 +1449,8 @@ export class Panel {
   }
 
   resizeRow(row: number, deltaHeight: number) {
-    if (deltaHeight < -1 * (this.rows[row].height - Style.cellHeight)) {
-      deltaHeight = -1 * (this.rows[row].height - Style.cellHeight);
+    if (deltaHeight < -1 * this.rows[row].height) {
+      deltaHeight = -1 * this.rows[row].height;
     }
     this.rows[row].height += deltaHeight;
     this.rows.forEach((r, i) => {
@@ -2790,7 +2814,6 @@ export class Panel {
                   n < colLen;
                   n++
                 ) {
-                  console.log(m, n);
                   this.cells[m][n].isCombined = false;
                   this.cells[m][n].rowSpan = 1;
                   this.cells[m][n].colSpan = 1;
