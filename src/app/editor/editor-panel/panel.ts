@@ -1877,8 +1877,8 @@ export class Panel {
       this.drawScrollBar(this.ctx);
       this.drawRuler(this.ctx);
     }
-    console.log(this.activeArr);
-    console.log(this.activeCell);
+    // console.log(this.activeArr);
+    // console.log(this.activeCell);
   }
 
   createColumn(count: number) {
@@ -1935,7 +1935,6 @@ export class Panel {
       this.scrollLeft = 0;
     }
 
-    console.log(this.cells);
     if (immediate) {
       this.refreshView();
     }
@@ -2530,7 +2529,6 @@ export class Panel {
               (i - this.cells.length) * Style.cellHeight,
             Style.cellHeight,
           ];
-      console.log(i, posY, y, height);
       if (inRange(posY, y, y + height, true)) {
         const cell = this.cells[i][this.activeCellPos.column].isCombined
           ? this.cells[i][this.activeCellPos.column].combineCell
@@ -2620,7 +2618,7 @@ export class Panel {
   }
 
   onKeyDown(event: KeyboardEvent) {
-    console.log('keydown', event);
+    // console.log('keydown', event);
     switch (event.code) {
       case KeyCode.Tab:
       case KeyCode.Enter:
@@ -2681,7 +2679,7 @@ export class Panel {
   }
 
   onKeyPress(event: KeyboardEvent) {
-    console.log('keypress', event);
+    // console.log('keypress', event);
     event.preventDefault();
     this.resetCellPerspective(
       this.cells[this.activeCellPos.row][this.activeCellPos.column]
@@ -2763,14 +2761,42 @@ export class Panel {
             j <= cLen;
             j++
           ) {
-            if (this.cells[i][j].rowSpan > 1 || this.cells[i][j].colSpan > 1) {
+            if (
+              this.cells[i][j].rowSpan > 1 ||
+              this.cells[i][j].colSpan > 1 ||
+              this.cells[i][j].isCombined
+            ) {
               hasCombine = true;
             }
             if (hasCombine) {
-              this.cells[i][j].isCombined = false;
-              this.cells[i][j].rowSpan = 1;
-              this.cells[i][j].colSpan = 1;
-              this.cells[i][j].combineCell = null;
+              const combineCell = this.cells[i][j].isCombined
+                ? this.cells[i][j].combineCell
+                : this.cells[i][j];
+              const mLen = Math.min(
+                combineCell.position.row + combineCell.rowSpan,
+                this.rows.length
+              );
+              const nLen = Math.min(
+                combineCell.position.column + combineCell.colSpan,
+                this.columns.length
+              );
+              for (
+                let m = combineCell.position.row, rowLen = mLen;
+                m < rowLen;
+                m++
+              ) {
+                for (
+                  let n = combineCell.position.column, colLen = nLen;
+                  n < colLen;
+                  n++
+                ) {
+                  console.log(m, n);
+                  this.cells[m][n].isCombined = false;
+                  this.cells[m][n].rowSpan = 1;
+                  this.cells[m][n].colSpan = 1;
+                  this.cells[m][n].combineCell = null;
+                }
+              }
             }
           }
         }
@@ -2927,7 +2953,6 @@ export class Panel {
   }
 
   toggleBold() {
-    console.log(this.cells);
     for (let index = 0, len = this.activeArr.length; index < len; index++) {
       const range = this.activeArr[index];
       const rowStart = Math.min(range.rowStart, range.rowEnd);
@@ -2947,7 +2972,6 @@ export class Panel {
           this.setRowDefaultAttr('fontWeight', fontWeight, i);
         }
       }
-      console.log(this.columns[columnStart]);
       for (
         let i = rowStart, rLen = Math.min(this.rows.length - 1, rowEnd);
         i <= rLen;
