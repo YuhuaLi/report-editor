@@ -17,6 +17,7 @@ export class EditorPanelComponent extends Panel
   implements OnInit, AfterViewInit {
   @ViewChild('panel') panel: ElementRef;
   @ViewChild('actionPanel') actionPanel: ElementRef;
+  @ViewChild('animationPanel') animationPanel: ElementRef;
 
   // width = 0;
   // height = 0;
@@ -77,6 +78,7 @@ export class EditorPanelComponent extends Panel
   ngAfterViewInit() {
     this.canvas = this.panel.nativeElement;
     this.actionCanvas = this.actionPanel.nativeElement;
+    this.animationCanvas = this.animationPanel.nativeElement;
     this.init();
   }
 }

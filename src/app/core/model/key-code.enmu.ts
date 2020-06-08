@@ -11,5 +11,8 @@ export enum KeyCode {
   Escape = 'Escape',
   Delete = 'Delete',
   Backspace = 'Backspace',
-  KeyA = 'KeyA'
+  KeyA = 'KeyA',
+  KeyC = 'KeyC',
+  KeyV = 'KeyV',
+  KeyX = 'KeyX'
 }

@@ -32,7 +32,7 @@ export const Style = {
   cellTextAlignRight: 'right',
   cellTextBaseline: 'middle',
   activeCellBorderWidth: 4,
-  activeCellBorderColor: '#096',
+  activeCellBorderColor: '#090',
   activeCellShadowColor: '#0f0',
   activeCellShadowBlur: 1,
   selectedCellBackgroundColor: '#0000001f',

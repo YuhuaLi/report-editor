@@ -2,8 +2,8 @@ import { Style } from 'src/app/core/model/style.const';
 import { CellRange } from 'src/app/core/model/cell-range.class';
 import { inRange } from 'src/app/core/decorator/utils/function';
 import { KeyCode } from 'src/app/core/model/key-code.enmu';
-import { Cell } from './cell.class';
-
+import { Cell } from '../../core/model/cell.class';
+import { cloneDeep } from 'lodash';
 export class Panel {
   width = 0;
   height = 0;
@@ -31,10 +31,11 @@ export class Panel {
   clientHeight = 0;
   mousePoint: any;
   autoScrollTimeoutID: any;
+  clipAnimationTimeoutID: any;
   unActiveCellPos: any;
   //   activeCellPos: any = { row: 1, column: 1, rangeIndex: 0 };
   private _activeCellPos: any;
-  activeCell: any;
+  activeCell: Cell;
   get activeCellPos() {
     return this._activeCellPos;
   }
@@ -53,16 +54,20 @@ export class Panel {
   unActiveRange: CellRange;
   resizeColumnCell: Cell;
   resizeRowCell: Cell;
+  clipBoard: { range: CellRange; isCut: boolean };
 
   canvas: HTMLCanvasElement;
   actionCanvas: HTMLCanvasElement;
+  animationCanvas: HTMLCanvasElement;
 
   ctx: CanvasRenderingContext2D;
   actionCtx: CanvasRenderingContext2D;
+  animationCtx: CanvasRenderingContext2D;
 
   init() {
     this.ctx = this.canvas.getContext('2d');
     this.actionCtx = this.actionCanvas.getContext('2d');
+    this.animationCtx = this.animationCanvas.getContext('2d');
     this.resize();
     this.activeCellPos = { row: 1, column: 1, rangeIndex: 0 };
     this.refreshView();
@@ -78,6 +83,8 @@ export class Panel {
     this.canvas.height = this.height;
     this.actionCanvas.width = this.width;
     this.actionCanvas.height = this.height;
+    this.animationCanvas.width = this.width;
+    this.animationCanvas.height = this.height;
     this.viewRowCount =
       Math.ceil((this.height - this.offsetTop) / Style.cellHeight) + 2;
     if (this.viewCells.length < this.viewRowCount) {
@@ -146,11 +153,12 @@ export class Panel {
 
     this.ctx.clearRect(0, 0, this.width, this.height);
 
-    const canvas = document.createElement('canvas');
-    canvas.width = this.width;
-    canvas.height = this.height;
-    const ctx = canvas.getContext('2d');
+    // const canvas = document.createElement('canvas');
+    // canvas.width = this.width;
+    // canvas.height = this.height;
+    // const ctx = canvas.getContext('2d');
     this.setActive();
+    this.setClipStatusAnimation();
     // this.drawPanel(ctx);
     // this.drawRuler(ctx);
     // this.drawScrollBar(ctx);
@@ -245,40 +253,42 @@ export class Panel {
             : null,
         previousValue: null,
       },
-      fontWeight:
-        isXRuler || isYRuler
-          ? Style.rulerCellFontWeight
-          : this.getCellDefaultAttr('fontWeight', rk, ck),
-      textAlign:
-        isXRuler || isYRuler
-          ? (Style.cellTextAlignCenter as CanvasTextAlign)
-          : this.getCellDefaultAttr('textAlign', rk, ck),
-      textBaseline: this.getCellDefaultAttr('textBaseline', rk, ck),
-      fontStyle: this.getCellDefaultAttr('fontStyle', rk, ck),
-      fontFamily:
-        isXRuler || isYRuler
-          ? Style.rulerCellFontFamily
-          : this.getCellDefaultAttr('fontFamily', rk, ck),
-      fontSize:
-        isXRuler || isYRuler
-          ? Style.rulerCellFontSize
-          : this.getCellDefaultAttr('fontSize', rk, ck),
-      background:
-        (isXRuler && !isYRuler) || (isYRuler && !isXRuler)
-          ? Style.rulerCellBackgroundColor
-          : this.getCellDefaultAttr('background', rk, ck),
-      color:
-        isXRuler || isYRuler
-          ? Style.rulerCellColor
-          : this.getCellDefaultAttr('color', rk, ck),
-      borderWidth:
-        isXRuler || isYRuler
-          ? Style.rulerCellBorderWidth
-          : this.getCellDefaultAttr('borderWidth', rk, ck),
-      borderColor:
-        isXRuler || isYRuler
-          ? Style.rulerCellBorderColor
-          : this.getCellDefaultAttr('borderColor', rk, ck),
+      style: {
+        fontWeight:
+          isXRuler || isYRuler
+            ? Style.rulerCellFontWeight
+            : this.getCellDefaultAttr('fontWeight', rk, ck),
+        textAlign:
+          isXRuler || isYRuler
+            ? (Style.cellTextAlignCenter as CanvasTextAlign)
+            : this.getCellDefaultAttr('textAlign', rk, ck),
+        textBaseline: this.getCellDefaultAttr('textBaseline', rk, ck),
+        fontStyle: this.getCellDefaultAttr('fontStyle', rk, ck),
+        fontFamily:
+          isXRuler || isYRuler
+            ? Style.rulerCellFontFamily
+            : this.getCellDefaultAttr('fontFamily', rk, ck),
+        fontSize:
+          isXRuler || isYRuler
+            ? Style.rulerCellFontSize
+            : this.getCellDefaultAttr('fontSize', rk, ck),
+        background:
+          (isXRuler && !isYRuler) || (isYRuler && !isXRuler)
+            ? Style.rulerCellBackgroundColor
+            : this.getCellDefaultAttr('background', rk, ck),
+        color:
+          isXRuler || isYRuler
+            ? Style.rulerCellColor
+            : this.getCellDefaultAttr('color', rk, ck),
+        borderWidth:
+          isXRuler || isYRuler
+            ? Style.rulerCellBorderWidth
+            : this.getCellDefaultAttr('borderWidth', rk, ck),
+        borderColor:
+          isXRuler || isYRuler
+            ? Style.rulerCellBorderColor
+            : this.getCellDefaultAttr('borderColor', rk, ck),
+      },
       rowSpan: 1,
       colSpan: 1,
       isCombined,
@@ -292,6 +302,9 @@ export class Panel {
               this.cells[rk][1].combineCell) ||
             (this.cells[rk][1].colSpan === Infinity && this.cells[rk][1]))) ||
         null,
+      get hidden() {
+        return !this.width || !this.height;
+      },
     };
   }
 
@@ -403,14 +416,14 @@ export class Panel {
     ctx.clearRect(0, 0, this.offsetLeft, this.height);
     const columns = this.viewCells[0].slice(1);
     const rows = this.viewCells.slice(1).map((cells) => cells[0]);
-    ctx.textAlign = columns[0].textAlign as CanvasTextAlign;
-    ctx.textBaseline = columns[0].textBaseline as CanvasTextBaseline;
+    ctx.textAlign = columns[0].style.textAlign as CanvasTextAlign;
+    ctx.textBaseline = columns[0].style.textBaseline as CanvasTextBaseline;
     ctx.strokeStyle = Style.rulerCellBorderColor;
     if (
       ctx.font !==
-      `${columns[0].fontStyle} ${columns[0].fontWeight} ${columns[0].fontSize}px ${columns[0].fontFamily}`
+      `${columns[0].style.fontStyle} ${columns[0].style.fontWeight} ${columns[0].style.fontSize}px ${columns[0].style.fontFamily}`
     ) {
-      ctx.font = `${columns[0].fontStyle} ${columns[0].fontWeight} ${columns[0].fontSize}px ${columns[0].fontFamily}`;
+      ctx.font = `${columns[0].style.fontStyle} ${columns[0].style.fontWeight} ${columns[0].style.fontSize}px ${columns[0].style.fontFamily}`;
     }
     for (let len = columns.length, i = len - 1; i >= 0; i--) {
       if (
@@ -448,12 +461,12 @@ export class Panel {
       ctx.fillRect(x, columns[i].y, width, columns[i].height);
       ctx.strokeRect(x, columns[i].y, width, columns[i].height);
       if (columns[i].content.value) {
-        ctx.fillStyle = columns[0].color;
+        ctx.fillStyle = columns[0].style.color;
         ctx.fillText(
           columns[i].content.value,
           x + width / 2,
           columns[i].y + columns[i].height / 2,
-          width - 2 * columns[0].borderWidth
+          width - 2 * columns[0].style.borderWidth
         );
       }
     }
@@ -488,12 +501,12 @@ export class Panel {
       ctx.fillRect(rows[i].x, y, rows[i].width, height);
       ctx.strokeRect(rows[i].x, y, rows[i].width, height);
       if (rows[i].content.value) {
-        ctx.fillStyle = columns[0].color;
+        ctx.fillStyle = columns[0].style.color;
         ctx.fillText(
           rows[i].content.value,
           rows[i].x + rows[i].width / 2,
           y + height / 2,
-          rows[i].width - 2 * columns[0].borderWidth
+          rows[i].width - 2 * columns[0].style.borderWidth
         );
       }
     }
@@ -523,6 +536,10 @@ export class Panel {
     const width = cell.width;
     const height = cell.height;
     let cellCtx: CanvasRenderingContext2D;
+    clip =
+      clip ||
+      (cell.content.value &&
+        cell.style.fontSize * 1.5 > cell.height - 2 * cell.style.borderWidth);
     if (clip) {
       const canvas = document.createElement('canvas');
       canvas.width = this.width;
@@ -531,40 +548,44 @@ export class Panel {
     } else {
       cellCtx = ctx;
     }
-    if (cell.background) {
-      if (cellCtx.fillStyle !== cell.background) {
-        cellCtx.fillStyle = cell.background;
+    if (cell.style.background) {
+      if (cellCtx.fillStyle !== cell.style.background) {
+        cellCtx.fillStyle = cell.style.background;
       }
       cellCtx.fillRect(x, y, width, height);
     }
-    if (cellCtx.strokeStyle !== cell.borderColor) {
-      cellCtx.strokeStyle = cell.borderColor;
+    if (cellCtx.strokeStyle !== cell.style.borderColor) {
+      cellCtx.strokeStyle = cell.style.borderColor;
     }
     cellCtx.strokeRect(x, y, width, height);
     if (cell.content.value) {
-      if (cellCtx.fillStyle !== cell.color) {
-        cellCtx.fillStyle = cell.color;
+      if (cellCtx.fillStyle !== cell.style.color) {
+        cellCtx.fillStyle = cell.style.color;
       }
-      if (cell.textAlign && cellCtx.textAlign !== cell.textAlign) {
-        cellCtx.textAlign = cell.textAlign as CanvasTextAlign;
+      if (cell.style.textAlign && cellCtx.textAlign !== cell.style.textAlign) {
+        cellCtx.textAlign = cell.style.textAlign as CanvasTextAlign;
       }
-      if (cell.textBaseline && cellCtx.textBaseline !== cell.textBaseline) {
-        cellCtx.textBaseline = cell.textBaseline as CanvasTextBaseline;
+      if (
+        cell.style.textBaseline &&
+        cellCtx.textBaseline !== cell.style.textBaseline
+      ) {
+        cellCtx.textBaseline = cell.style.textBaseline as CanvasTextBaseline;
       }
       if (
         cellCtx.font !==
-        `${cell.fontStyle} ${cell.fontWeight} ${cell.fontSize}px ${cell.fontFamily}`
+        `${cell.style.fontStyle} ${cell.style.fontWeight} ${cell.style.fontSize}px ${cell.style.fontFamily}`
       ) {
-        cellCtx.font = `${cell.fontStyle} ${cell.fontWeight} ${cell.fontSize}px ${cell.fontFamily}`;
+        cellCtx.font = `${cell.style.fontStyle} ${cell.style.fontWeight} ${cell.style.fontSize}px ${cell.style.fontFamily}`;
       }
+
       cellCtx.fillText(
         cell.content.value,
         x +
-          (cell.textAlign === Style.cellTextAlignCenter
+          (cell.style.textAlign === Style.cellTextAlignCenter
             ? width / 2
-            : cell.textAlign === Style.cellTextAlignRight
-            ? width - 2 * cell.borderWidth
-            : 2 * cell.borderWidth),
+            : cell.style.textAlign === Style.cellTextAlignRight
+            ? width - 2 * cell.style.borderWidth
+            : 2 * cell.style.borderWidth),
         y + height / 2
         // width - 2 * cell.borderWidth
       );
@@ -686,8 +707,9 @@ export class Panel {
         );
       }
       ctx.strokeStyle = Style.activeCellBorderColor;
-      ctx.shadowColor = Style.activeCellShadowColor;
-      ctx.shadowBlur = Style.activeCellShadowBlur;
+      ctx.lineWidth = Style.cellBorderWidth;
+      // ctx.shadowColor = Style.activeCellShadowColor;
+      // ctx.shadowBlur = Style.activeCellShadowBlur;
       ctx.strokeRect(
         this.cells[rowStart][columnStart].x - this.scrollLeft,
         this.cells[rowStart][columnStart].y - this.scrollTop,
@@ -733,6 +755,7 @@ export class Panel {
       ctx.fill();
       ctx.stroke();
     }
+
     this.actionCtx.drawImage(
       canvas,
       this.offsetLeft,
@@ -744,6 +767,79 @@ export class Panel {
       this.clientWidth,
       this.clientHeight
     );
+  }
+
+  setClipStatusAnimation(offset = 0) {
+    if (this.clipAnimationTimeoutID) {
+      clearTimeout(this.clipAnimationTimeoutID);
+    }
+    this.animationCtx.clearRect(0, 0, this.width, this.height);
+    if (this.clipBoard) {
+      const canvas = document.createElement('canvas');
+      canvas.width = this.width;
+      canvas.height = this.height;
+      const ctx = canvas.getContext('2d');
+      ctx.save();
+      const rowStart = Math.max(
+        Math.min(this.clipBoard.range.rowEnd, this.clipBoard.range.rowStart),
+        this.viewCells[1][0].position.row
+      );
+      const rowEnd = Math.min(
+        Math.max(this.clipBoard.range.rowEnd, this.clipBoard.range.rowStart),
+        this.viewCells[this.viewCells.length - 1][0].position.row
+      );
+      const columnStart = Math.max(
+        Math.min(
+          this.clipBoard.range.columnStart,
+          this.clipBoard.range.columnEnd
+        ),
+        this.viewCells[0][1].position.column
+      );
+      const columnEnd = Math.min(
+        Math.max(
+          this.clipBoard.range.columnStart,
+          this.clipBoard.range.columnEnd
+        ),
+        this.viewCells[0][this.viewCells[0].length - 1].position.column
+      );
+      ctx.strokeStyle = Style.activeCellBorderColor;
+      ctx.lineWidth = Style.cellBorderWidth;
+      ctx.setLineDash([8, 2]);
+      ctx.lineDashOffset = -1 * offset;
+      ctx.strokeRect(
+        this.cells[rowStart][columnStart].x -
+          this.scrollLeft +
+          Style.cellBorderWidth,
+        this.cells[rowStart][columnStart].y -
+          this.scrollTop +
+          Style.cellBorderWidth,
+        this.cells[rowEnd][columnEnd].x -
+          this.cells[rowStart][columnStart].x +
+          this.cells[rowEnd][columnEnd].width -
+          2 * Style.cellBorderWidth,
+        this.cells[rowEnd][columnEnd].y -
+          this.cells[rowStart][columnStart].y +
+          this.cells[rowEnd][columnEnd].height -
+          2 * Style.cellBorderWidth
+      );
+
+      this.animationCtx.drawImage(
+        canvas,
+        this.offsetLeft,
+        this.offsetTop,
+        this.clientWidth,
+        this.clientHeight,
+        this.offsetLeft,
+        this.offsetTop,
+        this.clientWidth,
+        this.clientHeight
+      );
+      this.clipAnimationTimeoutID = setTimeout(() => {
+        this.setClipStatusAnimation((offset + 2 < 16 && offset + 2) || 0);
+      }, 100);
+    } else {
+      this.clipAnimationTimeoutID = null;
+    }
   }
 
   generateColumnNum(columnIndex: number): string {
@@ -961,10 +1057,7 @@ export class Panel {
   }
 
   inSelectAllArea(x: number, y: number) {
-    return (
-      inRange(x, 0, this.offsetLeft, true) &&
-      inRange(y, 0, this.offsetTop, true)
-    );
+    return inRange(x, 0, this.offsetLeft) && inRange(y, 0, this.offsetTop);
   }
 
   onMouseDown(event: MouseEvent) {
@@ -985,7 +1078,10 @@ export class Panel {
     }
     const currentTime = new Date().getTime();
     let isDblClick = false;
-    if (currentTime - this.mousePoint.lastModifyTime < 300) {
+    if (
+      this.mousePoint.lastModifyTime &&
+      currentTime - this.mousePoint.lastModifyTime < 300
+    ) {
       isDblClick = true;
     }
     this.mousePoint = {
@@ -1072,24 +1168,24 @@ export class Panel {
         } else if (
           inRange(
             event.offsetX,
-            this.viewCells[0][i].x -
-              this.scrollLeft +
+            this.viewCells[0][i].x +
               this.viewCells[0][i].width -
               Style.rulerResizeGapWidth <
               this.viewCells[0][i].x
-              ? this.viewCells[0][i].x
+              ? this.viewCells[0][i].x - this.scrollLeft
               : this.viewCells[0][i].x -
                   this.scrollLeft +
                   this.viewCells[0][i].width -
                   Style.rulerResizeGapWidth,
-            this.viewCells[0][i].x -
-              this.scrollLeft +
+            this.viewCells[0][i].x +
               this.viewCells[0][i].width +
               Style.rulerResizeGapWidth >
               this.viewCells[0][i + 1].x + this.viewCells[0][i + 1].width
               ? this.viewCells[0][i + 1].width
                 ? this.viewCells[0][i + 1].x + this.viewCells[0][i + 1].width
-                : this.viewCells[0][i].x + this.viewCells[0][i].width
+                : this.viewCells[0][i].x +
+                  this.viewCells[0][i].width -
+                  this.scrollLeft
               : this.viewCells[0][i].x -
                   this.scrollLeft +
                   this.viewCells[0][i].width +
@@ -1166,24 +1262,18 @@ export class Panel {
         } else if (
           inRange(
             event.offsetY,
-            rowCells[i].y -
-              this.scrollTop +
-              rowCells[i].height -
-              Style.rulerResizeGapWidth <
+            rowCells[i].y + rowCells[i].height - Style.rulerResizeGapWidth <
               rowCells[i].y
-              ? rowCells[i].y
+              ? rowCells[i].y - this.scrollTop
               : rowCells[i].y -
                   this.scrollTop +
                   rowCells[i].height -
                   Style.rulerResizeGapWidth,
-            rowCells[i].y -
-              this.scrollTop +
-              rowCells[i].height +
-              Style.rulerResizeGapWidth >
+            rowCells[i].y + rowCells[i].height + Style.rulerResizeGapWidth >
               rowCells[i + 1].y + rowCells[i + 1].height
               ? rowCells[i + 1].height
-                ? rowCells[i + 1].y + rowCells[i + 1].height
-                : rowCells[i].y + rowCells[i].height
+                ? rowCells[i + 1].y + rowCells[i + 1].height - this.scrollTop
+                : rowCells[i].y + rowCells[i].height - this.scrollTop
               : rowCells[i].y -
                   this.scrollTop +
                   rowCells[i].height +
@@ -1284,6 +1374,7 @@ export class Panel {
                 cell.position.column === this.activeCellPos.column
               ) {
                 this.resetCellPerspective(cell);
+                this.clipBoard = null;
                 this.editingCell = cell;
                 this.state.isCellEdit = true;
                 this.activeArr = [
@@ -1335,6 +1426,7 @@ export class Panel {
 
   // @throttle(20)
   onMouseMove(event: MouseEvent) {
+    // console.log('move');
     if (
       (!this.inCellsArea(event.offsetX, event.offsetY) &&
         !this.state.isSelectCell) ||
@@ -1426,8 +1518,11 @@ export class Panel {
           this.setActive();
           this.drawRuler(this.ctx);
         }
-
-        this.mousePoint = { x: event.offsetX, y: event.offsetY };
+        this.mousePoint = {
+          x: event.offsetX,
+          y: event.offsetY,
+          lastModifyTime: this.mousePoint && this.mousePoint.lastModifyTime,
+        };
         this.isTicking = false;
       });
     }
@@ -1449,6 +1544,9 @@ export class Panel {
   }
 
   resizeRow(row: number, deltaHeight: number) {
+    if (!this.rows[row].height && deltaHeight < 0) {
+      return;
+    }
     if (deltaHeight < -1 * this.rows[row].height) {
       deltaHeight = -1 * this.rows[row].height;
     }
@@ -1489,25 +1587,23 @@ export class Panel {
           this.setActive();
         }
       }
-      this.autoScrollTimeoutID = setTimeout(
-        () =>
-          this.mousePoint &&
-          this.state.isSelectCell &&
-          this.autoScroll(this.mousePoint.x, this.mousePoint.y),
-        50
-      );
+      this.autoScrollTimeoutID = setTimeout(() => {
+        clearTimeout(this.autoScrollTimeoutID);
+        if (this.mousePoint && this.state.isSelectCell) {
+          this.autoScroll(this.mousePoint.x, this.mousePoint.y);
+        }
+      }, 50);
     } else {
       if (this.autoScrollTimeoutID) {
         clearTimeout(this.autoScrollTimeoutID);
         this.autoScrollTimeoutID = null;
       }
-      this.autoScrollTimeoutID = setTimeout(
-        () =>
-          this.mousePoint &&
-          this.state.isSelectCell &&
-          this.autoScroll(this.mousePoint.x, this.mousePoint.y),
-        50
-      );
+      this.autoScrollTimeoutID = setTimeout(() => {
+        clearTimeout(this.autoScrollTimeoutID);
+        if (this.mousePoint && this.state.isSelectCell) {
+          this.autoScroll(this.mousePoint.x, this.mousePoint.y);
+        }
+      }, 50);
     }
   }
 
@@ -2610,6 +2706,7 @@ export class Panel {
   }
 
   deleteContent(rangeArr: CellRange[]) {
+    this.clipBoard = null;
     for (let i = rangeArr.length - 1; i >= 0; i--) {
       const range = this.activeArr[i];
       for (
@@ -2676,6 +2773,7 @@ export class Panel {
         this.resetCellPerspective(
           this.cells[this.activeCellPos.row][this.activeCellPos.column]
         );
+        this.clipBoard = null;
         this.editingCell = this.cells[this.activeCellPos.row][
           this.activeCellPos.column
         ];
@@ -2697,6 +2795,43 @@ export class Panel {
           this.drawRuler(this.ctx);
         }
         break;
+      case KeyCode.KeyC:
+        if (event.ctrlKey) {
+          event.preventDefault();
+          if (this.activeArr.length === 1) {
+            this.clipBoard = {
+              range: cloneDeep(this.activeArr[0]),
+              isCut: false,
+            };
+            this.setClipStatusAnimation();
+          } else if (this.activeArr.length) {
+            alert('cannot copy');
+          }
+        }
+        break;
+      case KeyCode.KeyX:
+        if (event.ctrlKey) {
+          event.preventDefault();
+          if (this.activeArr.length === 1) {
+            this.clipBoard = {
+              range: cloneDeep(this.activeArr[0]),
+              isCut: true,
+            };
+            this.setClipStatusAnimation();
+          } else if (this.activeArr.length) {
+            alert('cannot cut');
+          }
+        }
+        break;
+      case KeyCode.KeyV:
+        if (event.ctrlKey) {
+          event.preventDefault();
+          this.paste();
+        }
+        break;
+      case KeyCode.Escape:
+        this.clipBoard = null;
+        break;
       default:
         break;
     }
@@ -2708,6 +2843,7 @@ export class Panel {
     this.resetCellPerspective(
       this.cells[this.activeCellPos.row][this.activeCellPos.column]
     );
+    this.clipBoard = null;
     this.editingCell = this.cells[this.activeCellPos.row][
       this.activeCellPos.column
     ];
@@ -2715,17 +2851,169 @@ export class Panel {
     this.state.isCellEdit = true;
   }
 
+  paste() {
+    if (!this.clipBoard) {
+      return;
+    }
+    if (this.clipBoard.isCut && this.activeArr.length > 1) {
+      alert('cannot paste');
+      return;
+    }
+
+    const [clipRowStart, clipRowEnd, clipColumnStart, clipColumnEnd] = [
+      Math.min(this.clipBoard.range.rowStart, this.clipBoard.range.rowEnd),
+      Math.min(
+        this.rows.length - 1,
+        Math.max(this.clipBoard.range.rowStart, this.clipBoard.range.rowEnd)
+      ),
+      Math.min(
+        this.clipBoard.range.columnStart,
+        this.clipBoard.range.columnEnd
+      ),
+      Math.min(
+        this.columns.length - 1,
+        Math.max(
+          this.clipBoard.range.columnStart,
+          this.clipBoard.range.columnEnd
+        )
+      ),
+    ];
+    const clipCells = cloneDeep(
+      this.cells
+        .filter((row, rowIndex) =>
+          inRange(rowIndex, clipRowStart, clipRowEnd, true)
+        )
+        .map((row) =>
+          row.filter((cell, columnIndex) =>
+            inRange(columnIndex, clipColumnStart, clipColumnEnd, true)
+          )
+        )
+    );
+
+    for (let m = 0, len = this.activeArr.length; m < len; m++) {
+      const range = this.activeArr[m];
+      const rowStart = Math.min(range.rowStart, range.rowEnd);
+      const rowEnd = rowStart + clipRowEnd - clipRowStart;
+      if (rowEnd > this.rows.length - 1) {
+        this.createRow(rowEnd - this.rows.length + 1);
+      }
+      const columnStart = Math.min(range.columnStart, range.columnEnd);
+      const columnEnd = columnStart + clipColumnEnd - clipColumnStart;
+      if (columnEnd > this.columns.length - 1) {
+        this.createColumn(columnEnd - this.columns.length + 1);
+      }
+      let breakCombine = false;
+
+      for (let i = rowStart; i <= rowEnd; i++) {
+        if (
+          (this.cells[i][columnStart].isCombined &&
+            this.cells[i][columnStart].combineCell.position.column <
+              columnStart) ||
+          (
+            (this.cells[i][columnEnd].isCombined &&
+              this.cells[i][columnEnd].combineCell) ||
+            this.cells[i][columnEnd]
+          ).position.column +
+            (
+              (this.cells[i][columnEnd].isCombined &&
+                this.cells[i][columnEnd].combineCell) ||
+              this.cells[i][columnEnd]
+            ).colSpan -
+            1 >
+            columnEnd
+        ) {
+          breakCombine = true;
+          break;
+        }
+      }
+      if (!breakCombine) {
+        for (let i = columnStart; i <= columnEnd; i++) {
+          if (
+            (this.cells[rowStart][i].isCombined &&
+              this.cells[rowStart][i].combineCell.position.row < rowStart) ||
+            (
+              (this.cells[rowEnd][i].isCombined &&
+                this.cells[rowEnd][i].combineCell) ||
+              this.cells[rowEnd][i]
+            ).position.row +
+              (
+                (this.cells[rowEnd][i].isCombined &&
+                  this.cells[rowEnd][i].combineCell) ||
+                this.cells[rowEnd][i]
+              ).rowSpan -
+              1 >
+              rowEnd
+          ) {
+            breakCombine = true;
+            break;
+          }
+        }
+      }
+
+      if (breakCombine && !this.clipBoard.isCut) {
+        alert('cannot paste');
+        return;
+      } else if (
+        breakCombine &&
+        this.clipBoard.isCut &&
+        !confirm('operation will split combinded cells')
+      ) {
+        return;
+      }
+
+      for (let i = rowStart; i <= rowEnd; i++) {
+        for (let j = columnStart; j <= columnEnd; j++) {
+          const clipCell = clipCells[i - rowStart][j - columnStart];
+          if (
+            this.cells[i][j].isCombined ||
+            this.cells[i][j].rowSpan > 1 ||
+            this.cells[i][j].colSpan > 1
+          ) {
+            this.unCombine(
+              (this.cells[i][j].isCombined && this.cells[i][j].combineCell) ||
+                this.cells[i][j]
+            );
+          }
+          this.cells[i][j].style = clipCell.style;
+          this.cells[i][j].content = clipCell.content;
+          this.cells[i][j].isCombined = clipCell.isCombined;
+          this.cells[i][j].rowSpan = clipCell.rowSpan;
+          this.cells[i][j].colSpan = clipCell.colSpan;
+          this.cells[i][j].combineCell = clipCell.combineCell;
+        }
+      }
+
+      if (this.clipBoard.isCut) {
+        for (let i = clipRowStart; i <= clipRowEnd; i++) {
+          for (let j = clipColumnStart; j <= clipColumnEnd; j++) {
+            if (
+              inRange(i, rowStart, rowEnd, true) &&
+              inRange(j, columnStart, columnEnd, true)
+            ) {
+              continue;
+            }
+            this.cells[i][j] = this.createCell(i, j);
+          }
+        }
+        this.clipBoard = null;
+      }
+      this.activeArr[m] = { rowStart, rowEnd, columnStart, columnEnd };
+    }
+
+    this.resetCellPerspective(this.activeCell);
+  }
+
   editCellCompelte(change = true) {
-    this.state.isCellEdit = false;
     if (!change) {
       this.editingCell.content.value = this.editingCell.content.previousValue;
     } else {
       this.editingCell.content.previousValue = this.editingCell.content.value;
+      this.drawCell(this.ctx, this.editingCell, true);
+      this.drawRuler(this.ctx);
+      this.drawScrollBar(this.ctx);
     }
-    this.drawCell(this.ctx, this.editingCell, true);
-    this.drawRuler(this.ctx);
-    this.drawScrollBar(this.ctx);
     this.editingCell = null;
+    this.state.isCellEdit = false;
     this.canvas.focus();
   }
 
@@ -2754,10 +3042,34 @@ export class Panel {
         }
         break;
       case KeyCode.Escape:
+        this.clipBoard = null;
         this.editCellCompelte(false);
         break;
       default:
         break;
+    }
+  }
+
+  unCombine(combineCell: Cell) {
+    const mLen = Math.min(
+      combineCell.position.row + combineCell.rowSpan,
+      this.rows.length
+    );
+    const nLen = Math.min(
+      combineCell.position.column + combineCell.colSpan,
+      this.columns.length
+    );
+    for (let m = combineCell.position.row, rowLen = mLen; m < rowLen; m++) {
+      for (
+        let n = combineCell.position.column, colLen = nLen;
+        n < colLen;
+        n++
+      ) {
+        this.cells[m][n].isCombined = false;
+        this.cells[m][n].rowSpan = 1;
+        this.cells[m][n].colSpan = 1;
+        this.cells[m][n].combineCell = null;
+      }
     }
   }
 
@@ -2791,35 +3103,11 @@ export class Panel {
               this.cells[i][j].isCombined
             ) {
               hasCombine = true;
-            }
-            if (hasCombine) {
+
               const combineCell = this.cells[i][j].isCombined
                 ? this.cells[i][j].combineCell
                 : this.cells[i][j];
-              const mLen = Math.min(
-                combineCell.position.row + combineCell.rowSpan,
-                this.rows.length
-              );
-              const nLen = Math.min(
-                combineCell.position.column + combineCell.colSpan,
-                this.columns.length
-              );
-              for (
-                let m = combineCell.position.row, rowLen = mLen;
-                m < rowLen;
-                m++
-              ) {
-                for (
-                  let n = combineCell.position.column, colLen = nLen;
-                  n < colLen;
-                  n++
-                ) {
-                  this.cells[m][n].isCombined = false;
-                  this.cells[m][n].rowSpan = 1;
-                  this.cells[m][n].colSpan = 1;
-                  this.cells[m][n].combineCell = null;
-                }
-              }
+              this.unCombine(combineCell);
             }
           }
         }
@@ -2874,7 +3162,7 @@ export class Panel {
     const rowReverse = range.rowStart > range.rowEnd;
     const columnReverse = range.columnStart > range.columnEnd;
     let needReCalc = false;
-    let [rStart, rEnd, cStart, cEnd] = [
+    const [rStart, rEnd, cStart, cEnd] = [
       Math.min(range.rowStart, range.rowEnd),
       Math.max(range.rowStart, range.rowEnd),
       Math.min(range.columnStart, range.columnEnd),
@@ -2984,7 +3272,7 @@ export class Panel {
       const columnEnd = Math.max(range.columnStart, range.columnEnd);
       const cell = this.cells[rowStart][columnStart];
       const fontWeight =
-        this.activeCell.fontWeight === 'normal' ? 'bold' : 'normal';
+        this.activeCell.style.fontWeight === 'normal' ? 'bold' : 'normal';
       if (rowEnd === Infinity) {
         for (let i = columnStart; i <= columnEnd; i++) {
           this.setColumnDefaultAttr('fontWeight', fontWeight, i);
@@ -3006,7 +3294,7 @@ export class Panel {
           j <= cLen;
           j++
         ) {
-          this.cells[i][j].fontWeight = fontWeight;
+          this.cells[i][j].style.fontWeight = fontWeight;
         }
       }
     }
