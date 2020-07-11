@@ -5,6 +5,7 @@ import {
   ElementRef,
   AfterViewInit,
   HostListener,
+  ChangeDetectorRef,
 } from '@angular/core';
 import { Panel } from './panel';
 
@@ -62,7 +63,7 @@ export class EditorPanelComponent extends Panel
   // ctx: CanvasRenderingContext2D;
   // actionCtx: CanvasRenderingContext2D;
 
-  constructor(private elmentRef: ElementRef) {
+  constructor(private elmentRef: ElementRef, private cdr: ChangeDetectorRef) {
     super();
   }
 
@@ -80,5 +81,6 @@ export class EditorPanelComponent extends Panel
     this.actionCanvas = this.actionPanel.nativeElement;
     this.animationCanvas = this.animationPanel.nativeElement;
     this.init();
+    this.cdr.detectChanges();
   }
 }

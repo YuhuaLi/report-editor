@@ -1,9 +1,7 @@
-import { Style } from 'src/app/core/model/style.const';
-import { CellRange } from 'src/app/core/model/cell-range.class';
-import { inRange } from 'src/app/core/decorator/utils/function';
-import { KeyCode } from 'src/app/core/model/key-code.enmu';
-import { Cell } from '../../core/model/cell.class';
 import { cloneDeep } from 'lodash';
+import { Cell, CellRange, Style, KeyCode, CellStyle } from 'src/app/core/model';
+import { inRange } from 'src/app/core/utils/function';
+
 export class Panel {
   width = 0;
   height = 0;
@@ -2996,7 +2994,15 @@ export class Panel {
           }
         }
         this.clipBoard = null;
+      } else if (
+        (inRange(rowStart, clipRowStart, clipRowEnd, true) ||
+          inRange(rowEnd, clipRowStart, clipRowEnd, true)) &&
+        (inRange(columnStart, clipColumnStart, clipColumnEnd, true) ||
+          inRange(columnEnd, clipColumnStart, clipColumnEnd))
+      ) {
+        this.clipBoard = null;
       }
+
       this.activeArr[m] = { rowStart, rowEnd, columnStart, columnEnd };
     }
 
@@ -3263,7 +3269,7 @@ export class Panel {
     }
   }
 
-  toggleBold() {
+  changeCellStyle(style: CellStyle) {
     for (let index = 0, len = this.activeArr.length; index < len; index++) {
       const range = this.activeArr[index];
       const rowStart = Math.min(range.rowStart, range.rowEnd);
@@ -3271,16 +3277,22 @@ export class Panel {
       const columnStart = Math.min(range.columnStart, range.columnEnd);
       const columnEnd = Math.max(range.columnStart, range.columnEnd);
       const cell = this.cells[rowStart][columnStart];
-      const fontWeight =
-        this.activeCell.style.fontWeight === 'normal' ? 'bold' : 'normal';
+      // const fontWeight =
+      //   this.activeCell.style.fontWeight === 'normal' ? 'bold' : 'normal';
       if (rowEnd === Infinity) {
         for (let i = columnStart; i <= columnEnd; i++) {
-          this.setColumnDefaultAttr('fontWeight', fontWeight, i);
+          for (const attr of Object.keys(style)) {
+            this.setRowDefaultAttr(attr, style[attr], i);
+          }
+          // this.setColumnDefaultAttr('fontWeight', fontWeight, i);
         }
       }
       if (columnEnd === Infinity) {
         for (let i = rowStart; i <= rowEnd; i++) {
-          this.setRowDefaultAttr('fontWeight', fontWeight, i);
+          for (const attr of Object.keys(style)) {
+            this.setRowDefaultAttr(attr, style[attr], i);
+          }
+          // this.setRowDefaultAttr('fontWeight', fontWeight, i);
         }
       }
       for (
@@ -3294,12 +3306,15 @@ export class Panel {
           j <= cLen;
           j++
         ) {
-          this.cells[i][j].style.fontWeight = fontWeight;
+          // this.cells[i][j].style.fontWeight = fontWeight;
+          Object.assign(this.cells[i][j].style, style);
         }
       }
     }
     this.refreshView();
   }
+
+  toggleItalic() {}
 
   getCellDefaultAttr(name: string, row: number, column: number) {
     return this.rows[row][name].lastModifyTime >
