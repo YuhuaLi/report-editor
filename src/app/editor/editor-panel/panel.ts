@@ -3,13 +3,13 @@ import { Cell, CellRange, Style, KeyCode, CellStyle } from 'src/app/core/model';
 import { inRange } from 'src/app/core/utils/function';
 
 export class Panel {
-  multiple = 1;
+  multiple = 2;
   width = 0;
   height = 0;
   viewRowCount = 0;
   viewColumnCount = 0;
-  offsetLeft = 60 * this.multiple;
-  offsetTop = 30 * this.multiple;
+  offsetLeft = 60;
+  offsetTop = 30;
   columns = [];
   rows = [];
   cells: Cell[][] = [];
@@ -546,8 +546,8 @@ export class Panel {
           height,
           rows[i].x,
           y,
-          rows[i].width / this.multiple,
-          height / this.multiple
+          rows[i].width,
+          height
         );
       }
       cellCtx.restore();
@@ -640,8 +640,8 @@ export class Panel {
         height,
         x,
         y,
-        width / this.multiple,
-        height / this.multiple
+        width,
+        height
       );
     }
     cellCtx.restore();
@@ -818,8 +818,8 @@ export class Panel {
       this.clientHeight,
       this.offsetLeft,
       this.offsetTop,
-      this.clientWidth / this.multiple,
-      this.clientHeight / this.multiple
+      this.clientWidth,
+      this.clientHeight
     );
   }
 
@@ -883,8 +883,8 @@ export class Panel {
         this.clientHeight,
         this.offsetLeft,
         this.offsetTop,
-        this.clientWidth / this.multiple,
-        this.clientHeight / this.multiple
+        this.clientWidth,
+        this.clientHeight
       );
       this.clipAnimationTimeoutID = setTimeout(() => {
         this.setClipStatusAnimation((offset + 2 < 16 && offset + 2) || 0);
@@ -990,8 +990,9 @@ export class Panel {
   }
 
   inRulerXResizeGap(x: number, y: number) {
+    const columns = this.viewCells[0].slice(1);
     if (this.inRulerXArea(x, y)) {
-      for (let i = 1, len = this.columns.length; i < len; i++) {
+      for (let i = 1, len = columns.length; i < len; i++) {
         if (
           inRange(
             x,
@@ -1013,8 +1014,9 @@ export class Panel {
   }
 
   inRulerYResizeGap(x: number, y: number) {
+    const rows = this.viewCells.slice(1).map((cells) => cells[0]);
     if (this.inRulerYArea(x, y)) {
-      for (let i = 1, len = this.rows.length; i < len; i++) {
+      for (let i = 1, len = rows.length; i < len; i++) {
         if (
           inRange(
             y,
@@ -1115,8 +1117,8 @@ export class Panel {
 
   onMouseDown(event: MouseEvent) {
     // this.panel.nativeElement.focus();
-    const eventX = event.offsetX;
-    const eventY = event.offsetY;
+    const eventX = event.offsetX * this.multiple;
+    const eventY = event.offsetY * this.multiple;
     event.preventDefault();
     event.stopPropagation();
     this.canvas.focus();
@@ -1481,8 +1483,8 @@ export class Panel {
   // @throttle(20)
   onMouseMove(event: MouseEvent) {
     // console.log('move');
-    const eventX = event.offsetX;
-    const eventY = event.offsetY;
+    const eventX = event.offsetX * this.multiple;
+    const eventY = event.offsetY * this.multiple;
     if (
       (!this.inCellsArea(eventX, eventY) && !this.state.isSelectCell) ||
       this.state.isSelectScrollYThumb ||

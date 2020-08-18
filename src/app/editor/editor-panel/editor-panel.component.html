@@ -86,10 +86,10 @@
     <div
       class="mask"
       [ngStyle]="{
-        'left.px': offsetLeft,
-        'top.px': offsetTop,
-        'right.px': scrollBarWidth,
-        'bottom.px': scrollBarWidth
+        'left.px': offsetLeft / multiple,
+        'top.px': offsetTop / multiple,
+        'right.px': scrollBarWidth / multiple,
+        'bottom.px': scrollBarWidth / multiple
       }"
     >
       <div class="mask-content">
@@ -103,10 +103,10 @@
             'font-family': 'editingCell?.style.fontFamily',
             'font-size.pt': editingCell?.style.fontSize,
             'padding.px': 2 * editingCell?.style.borderWidth,
-            'left.px': editingCell?.x - scrollLeft - offsetLeft + 1,
-            'top.px': editingCell?.y - scrollTop - offsetTop + 1,
-            'width.px': editingCell?.width - 2,
-            'height.px': editingCell?.height - 2
+            'left.px': (editingCell?.x - scrollLeft - offsetLeft + 1) / multiple,
+            'top.px': (editingCell?.y - scrollTop - offsetTop + 1) / multiple,
+            'width.px': (editingCell?.width - 2) / multiple,
+            'height.px': (editingCell?.height - 2) / multiple
           }"
           [(ngModel)]="editingCell?.content.value"
           (keydown)="onEditCellKeyDown($event)"
