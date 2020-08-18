@@ -771,8 +771,9 @@ export class Panel {
           this.cells[rowEnd][columnEnd].height
       );
     }
+    ctx.restore();
     if (this.unActiveRange) {
-      ctx.restore();
+      ctx.save();
       const rowStart = Math.max(
         Math.min(this.unActiveRange.rowEnd, this.unActiveRange.rowStart),
         this.viewCells[1][0].position.row
@@ -792,6 +793,7 @@ export class Panel {
       ctx.strokeStyle = Style.cellBorderColor;
       ctx.lineWidth = 3 * Style.cellBorderWidth;
       ctx.fillStyle = Style.unSelectedCellBackgroundColor;
+      ctx.beginPath();
       ctx.rect(
         this.cells[rowStart][columnStart].x - this.scrollLeft,
         this.cells[rowStart][columnStart].y - this.scrollTop,
@@ -804,6 +806,8 @@ export class Panel {
       );
       ctx.fill();
       ctx.stroke();
+      ctx.closePath();
+      ctx.restore();
     }
 
     this.actionCtx.drawImage(
@@ -817,7 +821,6 @@ export class Panel {
       this.clientWidth / this.multiple,
       this.clientHeight / this.multiple
     );
-    ctx.restore();
   }
 
   setClipStatusAnimation(offset = 0) {
