@@ -1,9 +1,10 @@
 import { cloneDeep } from 'lodash';
 import { Cell, CellRange, Style, KeyCode, CellStyle } from 'src/app/core/model';
 import { inRange } from 'src/app/core/utils/function';
+import { FloatElement } from 'src/app/core/model/float-element';
 
 export class Panel {
-  multiple = 2;
+  multiple = 1;
   width = 0;
   height = 0;
   viewRowCount = 0;
@@ -33,17 +34,19 @@ export class Panel {
   clipAnimationTimeoutID: any;
   unActiveCellPos: any;
   //   activeCellPos: any = { row: 1, column: 1, rangeIndex: 0 };
-  private _activeCellPos: any;
+  private activeCellPos$: any;
   activeCell: Cell;
   get activeCellPos() {
-    return this._activeCellPos;
+    return this.activeCellPos$;
   }
   set activeCellPos(val) {
-    this._activeCellPos = val;
+    this.activeCellPos$ = val;
     if (val) {
       this.activeCell = this.cells[val.row][val.column].isCombined
         ? this.cells[val.row][val.column].combineCell
         : this.cells[val.row][val.column];
+    } else {
+      this.activeCell = null;
     }
   }
 
@@ -54,6 +57,8 @@ export class Panel {
   resizeColumnCell: Cell;
   resizeRowCell: Cell;
   clipBoard: { range: CellRange; isCut: boolean };
+
+  floatArr: FloatElement[] = [];
 
   canvas: HTMLCanvasElement;
   actionCanvas: HTMLCanvasElement;
@@ -73,6 +78,7 @@ export class Panel {
     this.activeCellPos = { row: 1, column: 1, rangeIndex: 0 };
     this.refreshView();
     this.canvas.focus();
+    document.onpaste = this.onPaste;
   }
 
   resize() {
@@ -303,7 +309,9 @@ export class Panel {
       },
       rowSpan: 1,
       colSpan: 1,
-      isCombined,
+      get isCombined() {
+        return !!this.combineCell;
+      },
       combineCell:
         (isCombined &&
           ((this.cells[1][ck].isCombined && this.cells[1][ck].combineCell) ||
@@ -578,17 +586,27 @@ export class Panel {
     const width = cell.width;
     const height = cell.height;
     let cellCtx: CanvasRenderingContext2D;
+    if (cell.content.value) {
+      if (
+        ctx.font !==
+        `${cell.style.fontStyle} ${cell.style.fontWeight} ${cell.style.fontSize}pt ${cell.style.fontFamily}`
+      ) {
+        ctx.font = `${cell.style.fontStyle} ${cell.style.fontWeight} ${cell.style.fontSize}pt ${cell.style.fontFamily}`;
+      }
+    }
     clip =
       clip ||
       (cell.content.value &&
-        cell.style.fontSize * 1.5 > cell.height - 2 * cell.style.borderWidth);
+        (cell.style.fontSize * 1.5 > cell.height - 2 * cell.style.borderWidth ||
+          ctx.measureText(cell.content.value).width >
+            cell.width - 2 * cell.style.borderWidth));
     if (clip) {
       cellCtx = this.offscreenCtx;
       cellCtx.clearRect(0, 0, this.width, this.height);
+      cellCtx.save();
     } else {
       cellCtx = ctx;
     }
-    cellCtx.save();
     if (cell.style.background) {
       if (cellCtx.fillStyle !== cell.style.background) {
         cellCtx.fillStyle = cell.style.background;
@@ -599,6 +617,14 @@ export class Panel {
       cellCtx.strokeStyle = cell.style.borderColor;
     }
     cellCtx.strokeRect(x, y, width, height);
+    if (cell.content.value && clip) {
+      if (
+        cellCtx.font !==
+        `${cell.style.fontStyle} ${cell.style.fontWeight} ${cell.style.fontSize}pt ${cell.style.fontFamily}`
+      ) {
+        cellCtx.font = `${cell.style.fontStyle} ${cell.style.fontWeight} ${cell.style.fontSize}pt ${cell.style.fontFamily}`;
+      }
+    }
     if (cell.content.value) {
       if (cellCtx.fillStyle !== cell.style.color) {
         cellCtx.fillStyle = cell.style.color;
@@ -612,12 +638,6 @@ export class Panel {
       ) {
         cellCtx.textBaseline = cell.style.textBaseline as CanvasTextBaseline;
       }
-      if (
-        cellCtx.font !==
-        `${cell.style.fontStyle} ${cell.style.fontWeight} ${cell.style.fontSize}pt ${cell.style.fontFamily}`
-      ) {
-        cellCtx.font = `${cell.style.fontStyle} ${cell.style.fontWeight} ${cell.style.fontSize}pt ${cell.style.fontFamily}`;
-      }
       cellCtx.fillText(
         cell.content.value,
         x +
@@ -625,26 +645,16 @@ export class Panel {
             ? width / 2
             : cell.style.textAlign === Style.cellTextAlignRight
             ? width - 2 * cell.style.borderWidth
-            : 2 * cell.style.borderWidth),
+            : cell.style.borderWidth),
         y + height / 2
         // width - 2 * cell.borderWidth
       );
     }
 
     if (clip) {
-      ctx.drawImage(
-        cellCtx.canvas,
-        x,
-        y,
-        width,
-        height,
-        x,
-        y,
-        width,
-        height
-      );
+      ctx.drawImage(cellCtx.canvas, x, y, width, height, x, y, width, height);
+      cellCtx.restore();
     }
-    cellCtx.restore();
   }
 
   setActive() {
@@ -1135,6 +1145,7 @@ export class Panel {
     const currentTime = new Date().getTime();
     let isDblClick = false;
     if (
+      this.mousePoint &&
       this.mousePoint.lastModifyTime &&
       currentTime - this.mousePoint.lastModifyTime < 300
     ) {
@@ -1248,8 +1259,37 @@ export class Panel {
                   Style.rulerResizeGapWidth
           )
         ) {
-          this.resizeColumnCell = this.viewCells[0][i];
-          this.state.isResizeColumn = true;
+          if (isDblClick) {
+            const width = this.cells
+              .map((row) => row[i])
+              .reduce((acc, cur) => {
+                if (cur.content.value) {
+                  this.ctx.save();
+                  this.ctx.font = `${cur.style.fontStyle} ${cur.style.fontWeight} ${cur.style.fontSize}pt ${cur.style.fontFamily}`;
+                  if (
+                    this.ctx.measureText(cur.content.value).width +
+                      2 * Style.cellBorderWidth >
+                    acc
+                  ) {
+                    return (
+                      this.ctx.measureText(cur.content.value).width +
+                      2 * Style.cellBorderWidth
+                    );
+                  }
+                }
+                return acc;
+              }, 0);
+            console.log(width);
+            if (width) {
+              this.resizeColumn(
+                this.viewCells[0][i].position.column,
+                width - this.viewCells[0][i].width
+              );
+            }
+          } else {
+            this.resizeColumnCell = this.viewCells[0][i];
+            this.state.isResizeColumn = true;
+          }
           break;
         }
       }
@@ -1336,7 +1376,6 @@ export class Panel {
                   Style.rulerResizeGapWidth
           )
         ) {
-          console.log('dblclick', isDblClick, event);
           if (isDblClick) {
             this.resizeRow(
               rowCells[i].position.row,
@@ -1361,11 +1400,11 @@ export class Panel {
           this.getScrollXThumbLeft(this.getScrollXThumbHeight())
         )
       ) {
-        this.scrollX(-1 * this.viewColumnCount * Style.cellWidth);
+        this.scrollX((-1 * this.viewColumnCount * Style.cellWidth) / 2);
         this.setActive();
         this.drawRuler(this.ctx);
       } else {
-        this.scrollX(this.viewColumnCount * Style.cellWidth);
+        this.scrollX((this.viewColumnCount * Style.cellWidth) / 2);
         this.setActive();
         this.drawRuler(this.ctx);
       }
@@ -1380,21 +1419,23 @@ export class Panel {
           this.getScrollYThumbTop(this.getScrollYThumbHeight())
         )
       ) {
-        this.scrollY(-1 * this.viewRowCount * Style.cellHeight);
+        this.scrollY((-1 * this.viewRowCount * Style.cellHeight) / 2);
         this.setActive();
         this.drawRuler(this.ctx);
       } else {
-        this.scrollY(this.viewRowCount * Style.cellHeight);
+        this.scrollY((this.viewRowCount * Style.cellHeight) / 2);
         this.setActive();
         this.drawRuler(this.ctx);
       }
     } else if (this.inCellsArea(eventX, eventY)) {
-      for (let rLen = this.viewCells.length, i = rLen - 1; i > 0; i--) {
-        for (let cLen = this.viewCells[i].length, j = cLen - 1; j > 0; j--) {
-          const cell = this.viewCells[i][j].isCombined
-            ? this.viewCells[i][j].combineCell
-            : this.viewCells[i][j];
-          if (this.inCellArea(eventX, eventY, cell)) {
+      // for (let rLen = this.viewCells.length, i = rLen - 1; i > 0; i--) {
+      //   for (let cLen = this.viewCells[i].length, j = cLen - 1; j > 0; j--) {
+      //     const cell = this.viewCells[i][j].isCombined
+      //       ? this.viewCells[i][j].combineCell
+      //       : this.viewCells[i][j];
+      //     if (this.inCellArea(eventX, eventY, cell)) {
+        const cell = this.getViewCellByPoint(eventX, eventY);
+        if (!cell) return;
             const isUnActive =
               this.activeArr.some(
                 (range) =>
@@ -1432,6 +1473,7 @@ export class Panel {
                 this.resetCellPerspective(cell);
                 this.clipBoard = null;
                 this.editingCell = cell;
+                this.editingCell.content.previousValue = this.editingCell.content.value;
                 this.state.isCellEdit = true;
                 this.activeArr = [
                   {
@@ -1474,9 +1516,9 @@ export class Panel {
             this.setActive();
             this.drawRuler(this.ctx);
             return;
-          }
-        }
-      }
+    //       }
+    //     }
+    //   }
     }
   }
 
@@ -1751,12 +1793,14 @@ export class Panel {
   }
 
   calcActive(x: number, y: number) {
-    for (let rLen = this.viewCells.length, i = rLen - 1; i > 0; i--) {
-      for (let cLen = this.viewCells[i].length, j = cLen - 1; j > 0; j--) {
-        const cell = this.viewCells[i][j].isCombined
-          ? this.viewCells[i][j].combineCell
-          : this.viewCells[i][j];
-        if (this.inCellArea(x, y, cell)) {
+    // for (let rLen = this.viewCells.length, i = rLen - 1; i > 0; i--) {
+    //   for (let cLen = this.viewCells[i].length, j = cLen - 1; j > 0; j--) {
+    //     const cell = this.viewCells[i][j].isCombined
+    //       ? this.viewCells[i][j].combineCell
+    //       : this.viewCells[i][j];
+    //     if (this.inCellArea(x, y, cell)) {
+      const cell = this.getViewCellByPoint(x, y);
+      if (!cell) return;
           const range = {
             rowStart: this.activeCellPos.row,
             rowEnd: cell.position.row,
@@ -1765,18 +1809,20 @@ export class Panel {
           };
           this.recalcRange(range);
           return range;
-        }
-      }
-    }
+    //     }
+    //   }
+    // }
   }
 
   calcUnActive(x: number, y: number) {
-    for (let rLen = this.viewCells.length, i = rLen - 1; i > 0; i--) {
-      for (let cLen = this.viewCells[i].length, j = cLen - 1; j > 0; j--) {
-        const cell = this.viewCells[i][j].isCombined
-          ? this.viewCells[i][j].combineCell
-          : this.viewCells[i][j];
-        if (this.inCellArea(x, y, cell)) {
+    // for (let rLen = this.viewCells.length, i = rLen - 1; i > 0; i--) {
+    //   for (let cLen = this.viewCells[i].length, j = cLen - 1; j > 0; j--) {
+    //     const cell = this.viewCells[i][j].isCombined
+    //       ? this.viewCells[i][j].combineCell
+    //       : this.viewCells[i][j];
+    //     if (this.inCellArea(x, y, cell)) {
+          const cell = this.getViewCellByPoint(x, y);
+          if (!cell) return;
           const range = {
             rowStart: this.unActiveCellPos.row,
             rowEnd: cell.position.row,
@@ -1785,9 +1831,9 @@ export class Panel {
           };
           this.recalcRange(range);
           return range;
-        }
-      }
-    }
+    //     }
+    //   }
+    // }
   }
 
   reCalcActiveArr() {
@@ -2887,8 +2933,10 @@ export class Panel {
         break;
       case KeyCode.KeyV:
         if (event.ctrlKey) {
-          event.preventDefault();
-          this.paste();
+          // event.preventDefault();
+          if (!this.paste()) {
+            event.preventDefault();
+          }
         }
         break;
       case KeyCode.Escape:
@@ -2915,11 +2963,11 @@ export class Panel {
 
   paste() {
     if (!this.clipBoard) {
-      return;
+      return true;
     }
     if (this.clipBoard.isCut && this.activeArr.length > 1) {
       alert('cannot paste');
-      return;
+      return false;
     }
 
     const [clipRowStart, clipRowEnd, clipColumnStart, clipColumnEnd] = [
@@ -2952,80 +3000,103 @@ export class Panel {
         )
     );
 
-    for (let m = 0, len = this.activeArr.length; m < len; m++) {
-      const range = this.activeArr[m];
-      const rowStart = Math.min(range.rowStart, range.rowEnd);
-      const rowEnd = rowStart + clipRowEnd - clipRowStart;
-      if (rowEnd > this.rows.length - 1) {
-        this.createRow(rowEnd - this.rows.length + 1);
-      }
-      const columnStart = Math.min(range.columnStart, range.columnEnd);
-      const columnEnd = columnStart + clipColumnEnd - clipColumnStart;
-      if (columnEnd > this.columns.length - 1) {
-        this.createColumn(columnEnd - this.columns.length + 1);
-      }
-      let breakCombine = false;
+    if (!(clipRowStart === clipRowEnd && clipColumnStart === clipColumnEnd)) {
+      for (let m = 0, len = this.activeArr.length; m < len; m++) {
+        const range = this.activeArr[m];
+        const rowStart = Math.min(range.rowStart, range.rowEnd);
+        const rowEnd = rowStart + clipRowEnd - clipRowStart;
+        if (rowEnd > this.rows.length - 1) {
+          this.createRow(rowEnd - this.rows.length + 1);
+        }
+        const columnStart = Math.min(range.columnStart, range.columnEnd);
+        const columnEnd = columnStart + clipColumnEnd - clipColumnStart;
+        if (columnEnd > this.columns.length - 1) {
+          this.createColumn(columnEnd - this.columns.length + 1);
+        }
+        let breakCombine = false;
 
-      for (let i = rowStart; i <= rowEnd; i++) {
-        if (
-          (this.cells[i][columnStart].isCombined &&
-            this.cells[i][columnStart].combineCell.position.column <
-              columnStart) ||
-          (
-            (this.cells[i][columnEnd].isCombined &&
-              this.cells[i][columnEnd].combineCell) ||
-            this.cells[i][columnEnd]
-          ).position.column +
+        for (let i = rowStart; i <= rowEnd; i++) {
+          if (
+            (this.cells[i][columnStart].isCombined &&
+              this.cells[i][columnStart].combineCell.position.column <
+                columnStart) ||
             (
               (this.cells[i][columnEnd].isCombined &&
                 this.cells[i][columnEnd].combineCell) ||
               this.cells[i][columnEnd]
-            ).colSpan -
-            1 >
-            columnEnd
-        ) {
-          breakCombine = true;
-          break;
-        }
-      }
-      if (!breakCombine) {
-        for (let i = columnStart; i <= columnEnd; i++) {
-          if (
-            (this.cells[rowStart][i].isCombined &&
-              this.cells[rowStart][i].combineCell.position.row < rowStart) ||
-            (
-              (this.cells[rowEnd][i].isCombined &&
-                this.cells[rowEnd][i].combineCell) ||
-              this.cells[rowEnd][i]
-            ).position.row +
+            ).position.column +
               (
-                (this.cells[rowEnd][i].isCombined &&
-                  this.cells[rowEnd][i].combineCell) ||
-                this.cells[rowEnd][i]
-              ).rowSpan -
+                (this.cells[i][columnEnd].isCombined &&
+                  this.cells[i][columnEnd].combineCell) ||
+                this.cells[i][columnEnd]
+              ).colSpan -
               1 >
-              rowEnd
+              columnEnd
           ) {
             breakCombine = true;
             break;
           }
         }
-      }
+        if (!breakCombine) {
+          for (let i = columnStart; i <= columnEnd; i++) {
+            if (
+              (this.cells[rowStart][i].isCombined &&
+                this.cells[rowStart][i].combineCell.position.row < rowStart) ||
+              (
+                (this.cells[rowEnd][i].isCombined &&
+                  this.cells[rowEnd][i].combineCell) ||
+                this.cells[rowEnd][i]
+              ).position.row +
+                (
+                  (this.cells[rowEnd][i].isCombined &&
+                    this.cells[rowEnd][i].combineCell) ||
+                  this.cells[rowEnd][i]
+                ).rowSpan -
+                1 >
+                rowEnd
+            ) {
+              breakCombine = true;
+              break;
+            }
+          }
+        }
 
-      if (breakCombine && !this.clipBoard.isCut) {
-        alert('cannot paste');
-        return;
-      } else if (
-        breakCombine &&
-        this.clipBoard.isCut &&
-        !confirm('operation will split combinded cells')
-      ) {
-        return;
+        if (breakCombine && !this.clipBoard.isCut) {
+          alert('cannot paste');
+          return false;
+        } else if (
+          breakCombine &&
+          this.clipBoard.isCut &&
+          !confirm('operation will split combinded cells')
+        ) {
+          return false;
+        }
       }
-
+    }
+    for (let m = 0, len = this.activeArr.length; m < len; m++) {
+      const range = this.activeArr[m];
+      const rowStart = Math.min(range.rowStart, range.rowEnd);
+      const rowEnd =
+        clipRowStart === clipRowEnd && clipColumnStart === clipColumnEnd
+          ? Math.max(range.rowStart, range.rowEnd)
+          : rowStart + clipRowEnd - clipRowStart;
+      if (rowEnd > this.rows.length - 1) {
+        this.createRow(rowEnd - this.rows.length + 1);
+      }
+      const columnStart = Math.min(range.columnStart, range.columnEnd);
+      const columnEnd =
+        clipRowStart === clipRowEnd && clipColumnStart === clipColumnEnd
+          ? Math.max(range.columnStart, range.columnEnd)
+          : columnStart + clipColumnEnd - clipColumnStart;
+      if (columnEnd > this.columns.length - 1) {
+        this.createColumn(columnEnd - this.columns.length + 1);
+      }
       for (let i = rowStart; i <= rowEnd; i++) {
         for (let j = columnStart; j <= columnEnd; j++) {
-          const clipCell = clipCells[i - rowStart][j - columnStart];
+          const clipCell =
+            clipRowStart === clipRowEnd && clipColumnStart === clipColumnEnd
+              ? clipCells[0][0]
+              : clipCells[i - rowStart][j - columnStart];
           if (
             this.cells[i][j].isCombined ||
             this.cells[i][j].rowSpan > 1 ||
@@ -3038,10 +3109,15 @@ export class Panel {
           }
           this.cells[i][j].style = clipCell.style;
           this.cells[i][j].content = clipCell.content;
-          this.cells[i][j].isCombined = clipCell.isCombined;
+          // this.cells[i][j].isCombined = clipCell.isCombined;
           this.cells[i][j].rowSpan = clipCell.rowSpan;
           this.cells[i][j].colSpan = clipCell.colSpan;
-          this.cells[i][j].combineCell = clipCell.combineCell;
+          this.cells[i][j].combineCell =
+            (clipCell.combineCell &&
+              this.cells[rowStart + clipCell.combineCell.position.row - 1][
+                rowEnd + clipCell.combineCell.position.column
+              ]) ||
+            null;
         }
       }
 
@@ -3057,20 +3133,21 @@ export class Panel {
             this.cells[i][j] = this.createCell(i, j);
           }
         }
-        this.clipBoard = null;
+        // this.clipBoard = null;
       } else if (
         (inRange(rowStart, clipRowStart, clipRowEnd, true) ||
           inRange(rowEnd, clipRowStart, clipRowEnd, true)) &&
         (inRange(columnStart, clipColumnStart, clipColumnEnd, true) ||
           inRange(columnEnd, clipColumnStart, clipColumnEnd))
       ) {
-        this.clipBoard = null;
+        // this.clipBoard = null;
       }
 
       this.activeArr[m] = { rowStart, rowEnd, columnStart, columnEnd };
     }
 
     this.resetCellPerspective(this.activeCell);
+    return true;
   }
 
   editCellCompelte(change = true) {
@@ -3135,7 +3212,7 @@ export class Panel {
         n < colLen;
         n++
       ) {
-        this.cells[m][n].isCombined = false;
+        // this.cells[m][n].isCombined = false;
         this.cells[m][n].rowSpan = 1;
         this.cells[m][n].colSpan = 1;
         this.cells[m][n].combineCell = null;
@@ -3198,7 +3275,7 @@ export class Panel {
               if (i === rowStart && j === columnStart) {
                 continue;
               }
-              this.cells[i][j].isCombined = true;
+              // this.cells[i][j].isCombined = true;
               this.cells[i][j].rowSpan = 1;
               this.cells[i][j].colSpan = 1;
               this.cells[i][j].combineCell = cell;
@@ -3216,7 +3293,7 @@ export class Panel {
         const columnEnd = range.columnEnd + cell.colSpan - 1;
         for (let i = rowStart; i <= rowEnd; i++) {
           for (let j = columnStart; j <= columnEnd; j++) {
-            this.cells[i][j].isCombined = false;
+            // this.cells[i][j].isCombined = false;
             this.cells[i][j].rowSpan = 1;
             this.cells[i][j].colSpan = 1;
             this.cells[i][j].combineCell = null;
@@ -3387,6 +3464,302 @@ export class Panel {
     this.refreshView();
   }
 
+  onPaste = (event) => {
+    console.log('document paste');
+    if (this.clipBoard) {
+      this.clipBoard = null;
+      return false;
+    }
+    const fragment = this.htmlToElement(
+      event.clipboardData.getData('text/html')
+    );
+    console.log(fragment);
+    console.log(event.clipboardData);
+    if (fragment.querySelector('table')) {
+      const trArr = fragment.querySelectorAll('table tr');
+      const style = fragment.querySelector('style').innerHTML;
+      const clipCells = [];
+      for (let i = 0, trLen = trArr.length; i < trLen; i++) {
+        const tdArr = trArr[i].querySelectorAll('td');
+        if (!clipCells[i]) {
+          clipCells[i] = [];
+        }
+        for (let j = 0, tdLen = tdArr.length; j < tdLen; j++) {
+          if (clipCells[i][j]) {
+            continue;
+          }
+          const className = tdArr[j].className;
+          // this.createCell(i + this.activeCellPos);
+          const cell = this.createCell(i + 1, j + 1);
+          if (tdArr[j].innerText) {
+            cell.content.value = tdArr[j].innerText;
+          }
+          if (tdArr[j].getAttribute('colSpan')) {
+            cell.colSpan = parseInt(tdArr[j].getAttribute('colSpan'), 10);
+          }
+          if (tdArr[j].getAttribute('rowSpan')) {
+            cell.rowSpan = parseInt(tdArr[j].getAttribute('rowSpan'), 10);
+          }
+          if (cell.colSpan > 1) {
+            let col = 1;
+            while (col < cell.colSpan) {
+              clipCells[i][j + col] = this.createCell(i + 1, j + col + 1);
+              clipCells[i][j + col].combineCell = cell;
+              col++;
+            }
+          }
+          if (cell.rowSpan > 1) {
+            let row = 1;
+            while (row < cell.rowSpan) {
+              if (!clipCells[i + row]) {
+                clipCells[i + row] = [];
+              }
+              clipCells[i + row][j] = this.createCell(i + row + 1, j + 1);
+              clipCells[i + row][j].combineCell = cell;
+              row++;
+            }
+          }
+          if (className) {
+            const background = this.getCssFromStyle(
+              style,
+              className,
+              'background'
+            );
+            const fontSize = this.getCssFromStyle(
+              style,
+              className,
+              'font-size'
+            );
+            const textAlign = this.getCssFromStyle(
+              style,
+              className,
+              'text-align'
+            );
+            if (background) {
+              cell.style.background = background;
+            }
+            if (fontSize) {
+              cell.style.fontSize = parseFloat(fontSize);
+            }
+            if (textAlign) {
+              cell.style.textAlign = textAlign as CanvasTextAlign;
+            }
+          }
+          clipCells[i][j] = cell;
+        }
+      }
+      console.log(clipCells);
+      const [clipRowStart, clipRowEnd, clipColumnStart, clipColumnEnd] = [
+        0,
+        clipCells.length - 1,
+        0,
+        clipCells[0].length - 1,
+      ];
+      if (!(clipRowStart === clipRowEnd && clipColumnStart === clipColumnEnd)) {
+        for (let m = 0, len = this.activeArr.length; m < len; m++) {
+          const range = this.activeArr[m];
+          const rowStart = Math.min(range.rowStart, range.rowEnd);
+          const rowEnd = rowStart + clipRowEnd - clipRowStart;
+          if (rowEnd > this.rows.length - 1) {
+            this.createRow(rowEnd - this.rows.length + 1);
+          }
+          const columnStart = Math.min(range.columnStart, range.columnEnd);
+          const columnEnd = columnStart + clipColumnEnd - clipColumnStart;
+          if (columnEnd > this.columns.length - 1) {
+            this.createColumn(columnEnd - this.columns.length + 1);
+          }
+          let breakCombine = false;
+
+          for (let i = rowStart; i <= rowEnd; i++) {
+            if (
+              (this.cells[i][columnStart].isCombined &&
+                this.cells[i][columnStart].combineCell.position.column <
+                  columnStart) ||
+              (
+                (this.cells[i][columnEnd].isCombined &&
+                  this.cells[i][columnEnd].combineCell) ||
+                this.cells[i][columnEnd]
+              ).position.column +
+                (
+                  (this.cells[i][columnEnd].isCombined &&
+                    this.cells[i][columnEnd].combineCell) ||
+                  this.cells[i][columnEnd]
+                ).colSpan -
+                1 >
+                columnEnd
+            ) {
+              breakCombine = true;
+              break;
+            }
+          }
+          if (!breakCombine) {
+            for (let i = columnStart; i <= columnEnd; i++) {
+              if (
+                (this.cells[rowStart][i].isCombined &&
+                  this.cells[rowStart][i].combineCell.position.row <
+                    rowStart) ||
+                (
+                  (this.cells[rowEnd][i].isCombined &&
+                    this.cells[rowEnd][i].combineCell) ||
+                  this.cells[rowEnd][i]
+                ).position.row +
+                  (
+                    (this.cells[rowEnd][i].isCombined &&
+                      this.cells[rowEnd][i].combineCell) ||
+                    this.cells[rowEnd][i]
+                  ).rowSpan -
+                  1 >
+                  rowEnd
+              ) {
+                breakCombine = true;
+                break;
+              }
+            }
+          }
+          if (breakCombine) {
+            alert('cannot paste');
+            return false;
+          }
+        }
+      }
+      for (let m = 0, len = this.activeArr.length; m < len; m++) {
+        const range = this.activeArr[m];
+        const rowStart = Math.max(1, Math.min(range.rowStart, range.rowEnd));
+        const rowEnd =
+          clipRowStart === clipRowEnd && clipColumnStart === clipColumnEnd
+            ? Math.min(this.rows.length, Math.max(range.rowStart, range.rowEnd))
+            : rowStart + clipRowEnd - clipRowStart;
+        if (rowEnd > this.rows.length - 1) {
+          this.createRow(rowEnd - this.rows.length + 1);
+        }
+        const columnStart = Math.max(
+          1,
+          Math.min(range.columnStart, range.columnEnd)
+        );
+        const columnEnd = Math.min(
+          this.columns.length,
+          clipRowStart === clipRowEnd && clipColumnStart === clipColumnEnd
+            ? Math.min(
+                this.columns.length,
+                Math.max(range.columnStart, range.columnEnd)
+              )
+            : columnStart + clipColumnEnd - clipColumnStart
+        );
+        if (columnEnd > this.columns.length - 1) {
+          this.createColumn(columnEnd - this.columns.length + 1);
+        }
+        for (let i = rowStart; i <= rowEnd; i++) {
+          for (let j = columnStart; j <= columnEnd; j++) {
+            const clipCell =
+              clipRowStart === clipRowEnd && clipColumnStart === clipColumnEnd
+                ? clipCells[0][0]
+                : clipCells[i - rowStart][j - columnStart];
+            if (!clipCell) {
+              continue;
+            }
+            if (
+              this.cells[i][j].isCombined ||
+              this.cells[i][j].rowSpan > 1 ||
+              this.cells[i][j].colSpan > 1
+            ) {
+              this.unCombine(
+                (this.cells[i][j].isCombined && this.cells[i][j].combineCell) ||
+                  this.cells[i][j]
+              );
+            }
+            this.cells[i][j].style = clipCell.style;
+            this.cells[i][j].content = clipCell.content;
+            // this.cells[i][j].isCombined = clipCell.isCombined;
+            this.cells[i][j].rowSpan = clipCell.rowSpan;
+            this.cells[i][j].colSpan = clipCell.colSpan;
+            this.cells[i][j].combineCell =
+              (clipCell.combineCell &&
+                this.cells[rowStart + clipCell.combineCell.position.row - 1][
+                  columnStart + clipCell.combineCell.position.column - 1
+                ]) ||
+              null;
+          }
+        }
+
+        // if (this.clipBoard.isCut) {
+        //   for (let i = clipRowStart; i <= clipRowEnd; i++) {
+        //     for (let j = clipColumnStart; j <= clipColumnEnd; j++) {
+        //       if (
+        //         inRange(i, rowStart, rowEnd, true) &&
+        //         inRange(j, columnStart, columnEnd, true)
+        //       ) {
+        //         continue;
+        //       }
+        //       this.cells[i][j] = this.createCell(i, j);
+        //     }
+        //   }
+        //   // this.clipBoard = null;
+        // } else if (
+        //   (inRange(rowStart, clipRowStart, clipRowEnd, true) ||
+        //     inRange(rowEnd, clipRowStart, clipRowEnd, true)) &&
+        //   (inRange(columnStart, clipColumnStart, clipColumnEnd, true) ||
+        //     inRange(columnEnd, clipColumnStart, clipColumnEnd))
+        // ) {
+        //   // this.clipBoard = null;
+        // }
+
+        this.activeArr[m] = { rowStart, rowEnd, columnStart, columnEnd };
+      }
+
+      this.resetCellPerspective(this.activeCell);
+    } else if (event.clipboardData.getData('text/plain')) {
+      const value = event.clipboardData.getData('text/plain');
+      for (let i = 0, len = this.activeArr.length; i < len; i++) {
+        const rowStart = Math.max(
+          Math.min(this.activeArr[i].rowEnd, this.activeArr[i].rowStart),
+          this.cells[1][0].position.row
+        );
+        const rowEnd = Math.min(
+          Math.max(this.activeArr[i].rowEnd, this.activeArr[i].rowStart),
+          this.cells[this.rows.length - 1][0].position.row
+        );
+        const columnStart = Math.max(
+          Math.min(this.activeArr[i].columnStart, this.activeArr[i].columnEnd),
+          this.cells[0][1].position.column
+        );
+        const columnEnd = Math.min(
+          Math.max(this.activeArr[i].columnStart, this.activeArr[i].columnEnd),
+          this.cells[0][this.columns.length - 1].position.column
+        );
+        for (let m = rowStart; m <= rowEnd; m++) {
+          for (let n = columnStart; n <= columnEnd; n++) {
+            this.cells[m][n].content = { value };
+          }
+        }
+      }
+      this.resetCellPerspective(this.activeCell);
+    } else if (
+      event.clipboardData.items &&
+      Array.from(event.clipboardData.items).find(
+        (item: any) => item.kind === 'file' && /image\/\w*/.test(item.type)
+      )
+    ) {
+      for (const item of event.clipboardData.items) {
+        if (item.kind === 'file' && /image\/\w*/.test(item.type)) {
+          console.log(item.getAsFile());
+          createImageBitmap(item.getAsFile()).then((img) => {
+            console.log(img);
+            this.floatArr.push(
+              new FloatElement(
+                this.offsetLeft,
+                this.offsetTop,
+                img.width,
+                img.height,
+                img
+              )
+            );
+            this.ctx.drawImage(img, this.offsetLeft, this.offsetTop);
+          });
+        }
+      }
+    }
+  };
+
   toggleItalic() {}
 
   getCellDefaultAttr(attr: string, row: number, column: number) {
@@ -3395,8 +3768,10 @@ export class Panel {
     //   ? this.rows[row][name].value
     //   : this.columns[column][name].value;
     return (
-      (this.rows[row].style && this.rows[row].style[attr]) ||
-      (this.columns[column].style && this.columns[column].style[attr])
+      (this.rows[row] && this.rows[row].style && this.rows[row].style[attr]) ||
+      (this.columns[column] &&
+        this.columns[column].style &&
+        this.columns[column].style[attr])
     );
   }
   setRowDefaultAttr(attr: string, value: any, row: number) {
@@ -3409,5 +3784,36 @@ export class Panel {
     // this.columns[column][name].value = value;
     // this.columns[column][name].lastModifyTime = new Date().getTime();
     this.columns[column].style[attr] = value;
+  }
+
+  htmlToElement(html: string) {
+    const template = document.createElement('template');
+    html = html.trim();
+    template.innerHTML = html;
+    return template.content;
+  }
+
+  getCssFromStyle(style: string, className: string, attr: string) {
+    const pattern = `\\.${className}\\s*{\\s*[^}]*${attr}:([^;}]+);`;
+    const result = new RegExp(pattern).exec(style);
+    if (result) {
+      return result[1];
+    } else {
+      return null;
+    }
+  }
+
+  getViewCellByPoint(x: number, y: number) {
+    for (let rLen = this.viewCells.length, i = rLen - 1; i > 0; i--) {
+      for (let cLen = this.viewCells[i].length, j = cLen - 1; j > 0; j--) {
+        const cell = this.viewCells[i][j].isCombined
+          ? this.viewCells[i][j].combineCell
+          : this.viewCells[i][j];
+        if (this.inCellArea(x, y, cell)) {
+          return cell;
+        }
+      }
+    }
+    return null;
   }
 }

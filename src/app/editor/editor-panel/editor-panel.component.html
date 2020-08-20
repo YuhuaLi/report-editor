@@ -101,12 +101,17 @@
           autocomplete="off"
           [ngStyle]="{
             'font-family': 'editingCell?.style.fontFamily',
-            'font-size.pt': editingCell?.style.fontSize,
-            'padding.px': 2 * editingCell?.style.borderWidth,
-            'left.px': (editingCell?.x - scrollLeft - offsetLeft + 1) / multiple,
+            'font-size.pt': editingCell?.style.fontSize / multiple,
+            'padding.px': editingCell?.style.borderWidth / multiple,
+            'left.px':
+              (editingCell?.x - scrollLeft - offsetLeft + 1) / multiple,
             'top.px': (editingCell?.y - scrollTop - offsetTop + 1) / multiple,
-            'width.px': (editingCell?.width - 2) / multiple,
-            'height.px': (editingCell?.height - 2) / multiple
+            'width.px':
+              (editingCell?.width - 2 * editingCell?.style.borderWidth) /
+              multiple,
+            'height.px':
+              (editingCell?.height - 2 * editingCell?.style.borderWidth) /
+              multiple
           }"
           [(ngModel)]="editingCell?.content.value"
           (keydown)="onEditCellKeyDown($event)"
