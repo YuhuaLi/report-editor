@@ -5,6 +5,7 @@ export class FloatElement {
     this.width = width;
     this.height = height;
     this.content = content;
+    this.isActive = true;
   }
 
   x: number;
@@ -12,4 +13,5 @@ export class FloatElement {
   width: number;
   height: number;
   content: any;
+  isActive: boolean;
 }

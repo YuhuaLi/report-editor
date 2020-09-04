@@ -19,7 +19,8 @@ export class EditorPanelComponent extends Panel
   @ViewChild('panel') panel: ElementRef;
   @ViewChild('actionPanel') actionPanel: ElementRef;
   @ViewChild('animationPanel') animationPanel: ElementRef;
-
+  @ViewChild('floatPanel') floatPanel: ElementRef;
+  @ViewChild('floatActionPanel') floatActionPanel: ElementRef;
   // width = 0;
   // height = 0;
   // viewRowCount = 0;
@@ -80,7 +81,10 @@ export class EditorPanelComponent extends Panel
     this.canvas = this.panel.nativeElement;
     this.actionCanvas = this.actionPanel.nativeElement;
     this.animationCanvas = this.animationPanel.nativeElement;
+    this.floatCanvas = this.floatPanel.nativeElement;
+    this.floatActionCanvas = this.floatActionPanel.nativeElement;
     this.init();
     this.cdr.detectChanges();
   }
 }
+

@@ -36,5 +36,8 @@ export const Style = {
   activeCellShadowColor: '#0f0',
   activeCellShadowBlur: 1,
   selectedCellBackgroundColor: '#0000001f',
-  unSelectedCellBackgroundColor: '#ffffff80'
+  unSelectedCellBackgroundColor: '#ffffff80',
+  activeFloatElementBorderColor: '#aeaeae',
+  activeFloatElementBorderWidth: 1,
+  activeFloatElementResizeArcRadius: 6
 };
