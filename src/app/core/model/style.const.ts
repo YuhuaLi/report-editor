@@ -39,5 +39,6 @@ export const Style = {
   unSelectedCellBackgroundColor: '#ffffff80',
   activeFloatElementBorderColor: '#aeaeae',
   activeFloatElementBorderWidth: 1,
-  activeFloatElementResizeArcRadius: 6
+  activeFloatElementResizeArcRadius: 6,
+  allCellTriangleSideChief: 15
 };

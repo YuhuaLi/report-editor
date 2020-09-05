@@ -62,6 +62,8 @@
 >
   Right
 </button>
+<button (click)="zoomIn()">zoomIn</button>
+<button (click)="zoomOut()">zoomOut</button>
 <div class="panel panel-wrapper">
   <canvas
     tabindex="0"
@@ -88,10 +90,10 @@
     <div
       class="mask"
       [ngStyle]="{
-        'left.px': offsetLeft / multiple,
-        'top.px': offsetTop / multiple,
-        'right.px': scrollBarWidth / multiple,
-        'bottom.px': scrollBarWidth / multiple
+        'left.px': offsetLeft * multiple,
+        'top.px': offsetTop * multiple,
+        'right.px': scrollBarWidth * multiple,
+        'bottom.px': scrollBarWidth * multiple
       }"
     >
       <div class="mask-content">

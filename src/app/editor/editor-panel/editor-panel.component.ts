@@ -14,13 +14,15 @@ import { Panel } from './panel';
   templateUrl: './editor-panel.component.html',
   styleUrls: ['./editor-panel.component.scss'],
 })
-export class EditorPanelComponent extends Panel
+export class EditorPanelComponent
+  extends Panel
   implements OnInit, AfterViewInit {
   @ViewChild('panel') panel: ElementRef;
   @ViewChild('actionPanel') actionPanel: ElementRef;
   @ViewChild('animationPanel') animationPanel: ElementRef;
   @ViewChild('floatPanel') floatPanel: ElementRef;
   @ViewChild('floatActionPanel') floatActionPanel: ElementRef;
+  zoomSize: number;
   // width = 0;
   // height = 0;
   // viewRowCount = 0;
@@ -86,5 +88,13 @@ export class EditorPanelComponent extends Panel
     this.init();
     this.cdr.detectChanges();
   }
-}
 
+  zoomIn() {
+    this.multiple = this.multiple + 0.2 > 2 ? 2 : this.multiple + 0.2;
+    this.init();
+  }
+  zoomOut() {
+    this.multiple = this.multiple - 0.2 < 0.2 ? 0.2 : this.multiple - 0.2;
+    this.init();
+  }
+}

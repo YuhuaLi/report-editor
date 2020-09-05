@@ -8,6 +8,8 @@ export class Panel {
   multiple = 1;
   width = 0;
   height = 0;
+  offsetWidth = 0;
+  offsetHeight = 0;
   viewRowCount = 0;
   viewColumnCount = 0;
   offsetLeft = 60;
@@ -88,23 +90,29 @@ export class Panel {
     this.refreshView();
     this.canvas.focus();
     document.onpaste = this.onPaste;
+    document.onmouseup = this.onMouseUp;
   }
 
   resize() {
-    this.width = this.canvas.offsetWidth * this.multiple;
-    this.height = this.canvas.offsetHeight * this.multiple;
+    this.offsetWidth = this.canvas.offsetWidth;
+    this.offsetHeight = this.canvas.offsetHeight;
+    this.canvas.width = this.offsetWidth;
+    this.canvas.height = this.offsetHeight;
+    this.actionCanvas.width = this.offsetWidth;
+    this.actionCanvas.height = this.offsetHeight;
+    this.animationCanvas.width = this.offsetWidth;
+    this.animationCanvas.height = this.offsetHeight;
+    this.floatCanvas.width = this.offsetWidth;
+    this.floatCanvas.height = this.offsetHeight;
+    this.floatActionCanvas.width = this.offsetWidth;
+    this.floatActionCanvas.height = this.offsetHeight;
+    this.offscreenCanvas = document.createElement('canvas');
+    this.width = this.offsetWidth / this.multiple;
+    this.height = this.offsetHeight / this.multiple;
     this.clientWidth = this.width - this.offsetLeft - Style.scrollBarWidth;
     this.clientHeight = this.height - this.offsetTop - Style.scrollBarWidth;
-    this.canvas.width = this.width;
-    this.canvas.height = this.height;
-    this.actionCanvas.width = this.width;
-    this.actionCanvas.height = this.height;
-    this.animationCanvas.width = this.width;
-    this.animationCanvas.height = this.height;
-    this.floatCanvas.width = this.width;
-    this.floatCanvas.height = this.height;
-    this.floatActionCanvas.width = this.width;
-    this.floatActionCanvas.height = this.height;
+    this.offscreenCanvas.width = this.width;
+    this.offscreenCanvas.height = this.height;
     this.viewRowCount =
       Math.ceil((this.height - this.offsetTop) / Style.cellHeight) + 2;
     if (this.viewCells.length < this.viewRowCount) {
@@ -127,14 +135,9 @@ export class Panel {
       this.cells[this.cells.length - 1][0].height -
       this.offsetTop;
 
-    this.offscreenCanvas = document.createElement('canvas');
-    this.offscreenCanvas.width = this.width;
-    this.offscreenCanvas.height = this.height;
     this.offscreenCtx = this.offscreenCanvas.getContext('2d');
-    // this.canvas.width = this.width;
-    // this.canvas.height = this.height;
-    // this.actionCanvas.width = this.width;
-    // this.actionCanvas.height = this.height;
+
+    this.setTransform();
   }
 
   /** 重绘视图 */
@@ -182,6 +185,8 @@ export class Panel {
     // canvas.width = this.width;
     // canvas.height = this.height;
     // const ctx = canvas.getContext('2d');
+    this.setActive();
+    this.setClipStatusAnimation();
     this.drawFloat();
     // this.drawPanel(ctx);
     // this.drawRuler(ctx);
@@ -189,8 +194,7 @@ export class Panel {
     this.drawPanel(this.ctx);
     this.drawRuler(this.ctx);
     this.drawScrollBar(this.ctx);
-    this.setActive();
-    this.setClipStatusAnimation();
+
     // this.ctx.drawImage(canvas, 0, 0);
   }
 
@@ -470,30 +474,33 @@ export class Panel {
       ctx.font = `${columns[0].style.fontStyle} ${columns[0].style.fontWeight} ${columns[0].style.fontSize}pt ${columns[0].style.fontFamily}`;
     }
     for (let len = columns.length, i = len - 1; i >= 0; i--) {
-      if (
-        this.activeArr.length &&
-        this.activeArr.find((range) =>
-          inRange(
-            columns[i].position.column,
-            range.columnStart,
-            range.columnEnd,
-            true
-          )
-        )
-      ) {
-        ctx.fillStyle = Style.activeRulerCellBacgroundColor;
-      } else if (ctx.fillStyle !== Style.rulerCellBackgroundColor) {
-        ctx.fillStyle = Style.rulerCellBackgroundColor;
-      }
+      // if (
+      //   this.activeArr.length &&
+      //   this.activeArr.find((range) =>
+      //     inRange(
+      //       columns[i].position.column,
+      //       range.columnStart,
+      //       range.columnEnd,
+      //       true
+      //     )
+      //   )
+      // ) {
+      //   ctx.fillStyle = Style.activeRulerCellBacgroundColor;
+      // } else if (ctx.fillStyle !== Style.rulerCellBackgroundColor) {
+      //   ctx.fillStyle = Style.rulerCellBackgroundColor;
+      // }
       if (columns[i].width === 0) {
         continue;
       }
+      ctx.fillStyle = columns[i].style.background;
       const x =
         columns[i].x -
         this.scrollLeft +
         (columns[i - 1] && !columns[i - 1].width
           ? Style.rulerResizeGapWidth / 2
-          : 0);
+          : 0) +
+        0.5;
+      const y = columns[i].y + 0.5;
       const width =
         columns[i].width -
         (columns[i + 1] && !columns[i + 1].width
@@ -502,8 +509,9 @@ export class Panel {
         (columns[i - 1] && !columns[i - 1].width
           ? Style.rulerResizeGapWidth / 2
           : 0);
-      ctx.fillRect(x, columns[i].y, width, columns[i].height);
-      ctx.strokeRect(x, columns[i].y, width, columns[i].height);
+      const height = columns[i].height;
+      ctx.fillRect(x, y, width, height);
+      ctx.strokeRect(x, y, width, height);
       if (columns[i].content.value) {
         ctx.fillStyle = columns[0].style.color;
         ctx.fillText(
@@ -518,12 +526,15 @@ export class Panel {
       if (rows[i].height === 0) {
         continue;
       }
+      const x = rows[i].x + 0.5;
       const y =
         rows[i].y -
         this.scrollTop +
         (rows[i - 1] && !rows[i - 1].height
           ? Style.rulerResizeGapWidth / 2
-          : 0);
+          : 0) +
+        0.5;
+      const width = rows[i].width;
       const height =
         rows[i].height -
         (rows[i + 1] && !rows[i + 1].height
@@ -548,18 +559,19 @@ export class Panel {
       cellCtx.textBaseline = rows[i].style.textBaseline as CanvasTextBaseline;
       cellCtx.strokeStyle = Style.rulerCellBorderColor;
       cellCtx.font = ctx.font = `${rows[i].style.fontStyle} ${rows[i].style.fontWeight} ${rows[i].style.fontSize}pt ${rows[i].style.fontFamily}`;
-      if (
-        this.activeArr.length &&
-        this.activeArr.find((range) =>
-          inRange(rows[i].position.row, range.rowStart, range.rowEnd, true)
-        )
-      ) {
-        cellCtx.fillStyle = Style.activeRulerCellBacgroundColor;
-      } else if (ctx.fillStyle !== Style.rulerCellBackgroundColor) {
-        cellCtx.fillStyle = Style.rulerCellBackgroundColor;
-      }
-      cellCtx.fillRect(rows[i].x, y, rows[i].width, height);
-      cellCtx.strokeRect(rows[i].x, y, rows[i].width, height);
+      // if (
+      //   this.activeArr.length &&
+      //   this.activeArr.find((range) =>
+      //     inRange(rows[i].position.row, range.rowStart, range.rowEnd, true)
+      //   )
+      // ) {
+      //   cellCtx.fillStyle = Style.activeRulerCellBacgroundColor;
+      // } else if (ctx.fillStyle !== Style.rulerCellBackgroundColor) {
+      //   cellCtx.fillStyle = Style.rulerCellBackgroundColor;
+      // }
+      cellCtx.fillStyle = rows[i].style.background;
+      cellCtx.fillRect(x, y, width, height);
+      cellCtx.strokeRect(x, y, width, height);
       if (rows[i].content.value) {
         cellCtx.fillStyle = columns[0].style.color;
         cellCtx.fillText(
@@ -586,8 +598,28 @@ export class Panel {
     }
 
     ctx.fillStyle = Style.cellBackgroundColor;
-    ctx.fillRect(0, 0, this.offsetLeft, this.offsetTop);
-    ctx.strokeRect(0, 0, this.offsetLeft, this.offsetTop);
+    ctx.fillRect(0.5, 0.5, this.offsetLeft, this.offsetTop);
+    ctx.strokeRect(0.5, 0.5, this.offsetLeft, this.offsetTop);
+    ctx.fillStyle = Style.activeRulerCellBacgroundColor;
+    ctx.beginPath();
+    ctx.moveTo(
+      this.offsetLeft -
+        Style.rulerResizeGapWidth -
+        Style.allCellTriangleSideChief,
+      this.offsetTop - Style.rulerResizeGapWidth
+    );
+    ctx.lineTo(
+      this.offsetLeft - Style.rulerResizeGapWidth,
+      this.offsetTop - Style.rulerResizeGapWidth
+    );
+    ctx.lineTo(
+      this.offsetLeft - Style.rulerResizeGapWidth,
+      this.offsetTop -
+        Style.rulerResizeGapWidth -
+        Style.allCellTriangleSideChief
+    );
+    ctx.fill();
+    ctx.closePath();
     ctx.restore();
   }
 
@@ -722,11 +754,21 @@ export class Panel {
     const ctx = this.offscreenCtx;
     ctx.clearRect(0, 0, this.width, this.height);
     ctx.save();
+    this.cells[0]
+      .slice(1)
+      .forEach(
+        (cell) => (cell.style.background = Style.rulerCellBackgroundColor)
+      );
+    this.cells
+      .slice(1)
+      .forEach(
+        (row) => (row[0].style.background = Style.rulerCellBackgroundColor)
+      );
     if (this.floatArr.find((elem) => elem.isActive)) {
       ctx.lineWidth = Style.activeFloatElementBorderWidth;
       ctx.strokeStyle = Style.activeFloatElementBorderColor;
       ctx.fillStyle = '#fff';
-      const radius = Style.activeFloatElementResizeArcRadius * this.multiple;
+      const radius = Style.activeFloatElementResizeArcRadius;
       for (const elem of this.floatArr) {
         if (elem.isActive) {
           const x = elem.x - this.scrollLeft;
@@ -813,14 +855,27 @@ export class Panel {
             this.viewCells[0][this.viewCells[0].length - 1].position.column
           );
 
+          this.cells[0].forEach((cell, index) => {
+            if (index && inRange(index, columnStart, columnEnd, true)) {
+              cell.style.background = Style.activeRulerCellBacgroundColor;
+            }
+          });
+          this.cells.forEach((row, index) => {
+            if (index && inRange(index, rowStart, rowEnd, true)) {
+              row[0].style.background = Style.activeRulerCellBacgroundColor;
+            }
+          });
+
           ctx.fillStyle = Style.selectedCellBackgroundColor;
           ctx.fillRect(
             this.cells[rowStart][columnStart].x -
               this.scrollLeft +
-              3 * Style.cellBorderWidth,
+              3 * Style.cellBorderWidth +
+              0.5,
             this.cells[rowStart][columnStart].y -
               this.scrollTop +
-              3 * Style.cellBorderWidth,
+              3 * Style.cellBorderWidth +
+              0.5,
             this.cells[rowEnd][columnEnd].x -
               this.cells[rowStart][columnStart].x +
               this.cells[rowEnd][columnEnd].width -
@@ -841,14 +896,14 @@ export class Panel {
                   .combineCell
               : this.cells[this.activeCellPos.row][this.activeCellPos.column];
             ctx.clearRect(
-              cell.x - this.scrollLeft,
-              cell.y - this.scrollTop,
+              cell.x - this.scrollLeft + 0.5,
+              cell.y - this.scrollTop + 0.5,
               cell.width,
               cell.height
             );
             ctx.strokeRect(
-              cell.x - this.scrollLeft + 3 * Style.cellBorderWidth,
-              cell.y - this.scrollTop + 3 * Style.cellBorderWidth,
+              cell.x - this.scrollLeft + 3 * Style.cellBorderWidth + 0.5,
+              cell.y - this.scrollTop + 3 * Style.cellBorderWidth + 0.5,
               cell.width - 6 * Style.cellBorderWidth,
               cell.height - 6 * Style.cellBorderWidth
             );
@@ -872,10 +927,21 @@ export class Panel {
           this.viewCells[0][this.viewCells[0].length - 1].position.column
         );
 
+        this.cells[0].forEach((cell, index) => {
+          if (index && inRange(index, columnStart, columnEnd, true)) {
+            cell.style.background = Style.activeRulerCellBacgroundColor;
+          }
+        });
+        this.cells.forEach((row, index) => {
+          if (index && inRange(index, rowStart, rowEnd, true)) {
+            row[0].style.background = Style.activeRulerCellBacgroundColor;
+          }
+        });
+
         ctx.fillStyle = Style.selectedCellBackgroundColor;
         ctx.fillRect(
-          this.cells[rowStart][columnStart].x - this.scrollLeft,
-          this.cells[rowStart][columnStart].y - this.scrollTop,
+          this.cells[rowStart][columnStart].x - this.scrollLeft + 0.5,
+          this.cells[rowStart][columnStart].y - this.scrollTop + 0.5,
           this.cells[rowEnd][columnEnd].x -
             this.cells[rowStart][columnStart].x +
             this.cells[rowEnd][columnEnd].width,
@@ -891,8 +957,8 @@ export class Panel {
                 .combineCell
             : this.cells[this.activeCellPos.row][this.activeCellPos.column];
           ctx.clearRect(
-            cell.x - this.scrollLeft,
-            cell.y - this.scrollTop,
+            cell.x - this.scrollLeft + 0.5,
+            cell.y - this.scrollTop + 0.5,
             cell.width,
             cell.height
           );
@@ -902,8 +968,8 @@ export class Panel {
         // ctx.shadowColor = Style.activeCellShadowColor;
         // ctx.shadowBlur = Style.activeCellShadowBlur;
         ctx.strokeRect(
-          this.cells[rowStart][columnStart].x - this.scrollLeft,
-          this.cells[rowStart][columnStart].y - this.scrollTop,
+          this.cells[rowStart][columnStart].x - this.scrollLeft + 0.5,
+          this.cells[rowStart][columnStart].y - this.scrollTop + 0.5,
           this.cells[rowEnd][columnEnd].x -
             this.cells[rowStart][columnStart].x +
             this.cells[rowEnd][columnEnd].width,
@@ -938,12 +1004,12 @@ export class Panel {
           this.viewCells[0][this.viewCells[0].length - 1].position.column
         );
         ctx.strokeStyle = Style.cellBorderColor;
-        ctx.lineWidth = 3 * Style.cellBorderWidth;
+        ctx.lineWidth = 2 * Style.cellBorderWidth;
         ctx.fillStyle = Style.unSelectedCellBackgroundColor;
         ctx.beginPath();
         ctx.rect(
-          this.cells[rowStart][columnStart].x - this.scrollLeft,
-          this.cells[rowStart][columnStart].y - this.scrollTop,
+          this.cells[rowStart][columnStart].x - this.scrollLeft + 0.5,
+          this.cells[rowStart][columnStart].y - this.scrollTop + 0.5,
           this.cells[rowEnd][columnEnd].x -
             this.cells[rowStart][columnStart].x +
             this.cells[rowEnd][columnEnd].width,
@@ -1067,33 +1133,33 @@ export class Panel {
   /** 鼠标移出绘制区域事件 */
   onMouseOut(event: MouseEvent) {
     // console.log('mouseout', event);
-    this.state.isSelectCell = false;
-    this.state.isScrollXThumbHover = false;
-    this.state.isScrollYThumbHover = false;
-    this.state.isSelectScrollXThumb = false;
-    this.state.isSelectScrollYThumb = false;
-    this.state.isSelectRulerX = false;
-    this.state.isSelectRulerY = false;
-    this.state.isResizeColumn = false;
-    this.state.isResizeRow = false;
-    this.resizeColumnCell = null;
-    this.resizeRowCell = null;
-    this.drawScrollBar(this.ctx);
-    // this.mousePoint = null;
-    if (
-      this.state.unSelectCell ||
-      this.state.unSelectRulerX ||
-      this.state.unSelectRulerY
-    ) {
-      this.reCalcActiveArr();
-      this.unActiveRange = null;
-      this.state.unSelectCell = false;
-      this.state.unSelectRulerX = false;
-      this.state.unSelectRulerY = false;
-      this.setActive();
-      this.drawScrollBar(this.ctx);
-      this.drawRuler(this.ctx);
-    }
+    // this.state.isSelectCell = false;
+    // this.state.isScrollXThumbHover = false;
+    // this.state.isScrollYThumbHover = false;
+    // this.state.isSelectScrollXThumb = false;
+    // this.state.isSelectScrollYThumb = false;
+    // this.state.isSelectRulerX = false;
+    // this.state.isSelectRulerY = false;
+    // this.state.isResizeColumn = false;
+    // this.state.isResizeRow = false;
+    // this.resizeColumnCell = null;
+    // this.resizeRowCell = null;
+    // this.drawScrollBar(this.ctx);
+    // // this.mousePoint = null;
+    // if (
+    //   this.state.unSelectCell ||
+    //   this.state.unSelectRulerX ||
+    //   this.state.unSelectRulerY
+    // ) {
+    //   this.reCalcActiveArr();
+    //   this.unActiveRange = null;
+    //   this.state.unSelectCell = false;
+    //   this.state.unSelectRulerX = false;
+    //   this.state.unSelectRulerY = false;
+    //   this.setActive();
+    //   this.drawScrollBar(this.ctx);
+    //   this.drawRuler(this.ctx);
+    // }
   }
 
   onMouseEnter(event) {
@@ -1290,8 +1356,10 @@ export class Panel {
   /** 鼠标点下时事件 */
   onMouseDown(event: MouseEvent) {
     // this.panel.nativeElement.focus();
-    const eventX = event.offsetX * this.multiple;
-    const eventY = event.offsetY * this.multiple;
+    // const eventX = event.offsetX * this.multiple;
+    // const eventY = event.offsetY * this.multiple;
+    const eventX = event.offsetX / this.multiple;
+    const eventY = event.offsetY / this.multiple;
     event.preventDefault();
     event.stopPropagation();
     this.canvas.focus();
@@ -1419,7 +1487,8 @@ export class Panel {
               : this.viewCells[0][i].x -
                   this.scrollLeft +
                   this.viewCells[0][i].width +
-                  Style.rulerResizeGapWidth
+                  Style.rulerResizeGapWidth,
+            true
           )
         ) {
           if (isDblClick) {
@@ -1600,9 +1669,13 @@ export class Panel {
       const floatElement = this.getViewFloatElementByPoint(eventX, eventY);
 
       if (floatElement) {
-        this.floatArr.forEach(
-          (elem) => (elem.isActive = floatElement === elem)
-        );
+        if (event.ctrlKey || event.shiftKey) {
+          floatElement.isActive = true;
+        } else {
+          this.floatArr.forEach(
+            (elem) => (elem.isActive = floatElement === elem)
+          );
+        }
         this.activeCellPos = null;
         this.activeArr = [];
       } else {
@@ -1610,6 +1683,7 @@ export class Panel {
           (elem) => (elem.isActive = floatElement === elem)
         );
         const cell = this.getViewCellByPoint(eventX, eventY);
+        console.log(cell);
         if (!cell) {
           return;
         }
@@ -1658,25 +1732,47 @@ export class Panel {
             this.activeCellPos.rangeIndex = 0;
           } else {
             this.state.isSelectCell = true;
-            this.activeArr.push({
-              rowStart:
-                (event.shiftKey &&
-                  this.activeArr.length &&
-                  this.activeArr[this.activeArr.length - 1].rowStart) ||
-                cell.position.row,
-              columnStart:
-                (event.shiftKey &&
-                  this.activeArr.length &&
-                  this.activeArr[this.activeArr.length - 1].columnStart) ||
-                cell.position.column,
-              rowEnd: cell.position.row + cell.rowSpan - 1,
-              columnEnd: cell.position.column + cell.colSpan - 1,
-            });
-            this.activeCellPos = {
-              row: this.activeArr[this.activeArr.length - 1].rowStart,
-              column: this.activeArr[this.activeArr.length - 1].columnStart,
-              rangeIndex: this.activeArr.length - 1,
-            };
+            if (event.shiftKey) {
+              const range = {
+                rowStart: this.activeCellPos.row,
+                rowEnd: cell.position.row,
+                columnStart: this.activeCellPos.column,
+                columnEnd: cell.position.column,
+              };
+              this.recalcRange(range);
+              this.activeArr.push(range);
+            } else {
+              this.activeArr.push({
+                rowStart: cell.position.row,
+                columnStart: cell.position.column,
+                rowEnd: cell.position.row + cell.rowSpan - 1,
+                columnEnd: cell.position.column + cell.colSpan - 1,
+              });
+              this.activeCellPos = {
+                row: cell.position.row,
+                column: cell.position.column,
+                rangeIndex: this.activeArr.length - 1,
+              };
+            }
+            // this.activeArr.push({
+            //   rowStart:
+            //     (event.shiftKey &&
+            //       this.activeArr.length &&
+            //       this.activeArr[this.activeArr.length - 1].rowStart) ||
+            //     cell.position.row,
+            //   columnStart:
+            //     (event.shiftKey &&
+            //       this.activeArr.length &&
+            //       this.activeArr[this.activeArr.length - 1].columnStart) ||
+            //     cell.position.column,
+            //   rowEnd: cell.position.row + cell.rowSpan - 1,
+            //   columnEnd: cell.position.column + cell.colSpan - 1,
+            // });
+            // this.activeCellPos = {
+            //   row: this.activeArr[this.activeArr.length - 1].rowStart,
+            //   column: this.activeArr[this.activeArr.length - 1].columnStart,
+            //   rangeIndex: this.activeArr.length - 1,
+            // };
             if (!event.ctrlKey || event.shiftKey) {
               this.activeArr = [this.activeArr[this.activeArr.length - 1]];
               this.activeCellPos.rangeIndex = 0;
@@ -1699,8 +1795,8 @@ export class Panel {
   /** 鼠标移动事件 */
   onMouseMove(event: MouseEvent) {
     // console.log('move');
-    const eventX = event.offsetX * this.multiple;
-    const eventY = event.offsetY * this.multiple;
+    const eventX = event.offsetX / this.multiple;
+    const eventY = event.offsetY / this.multiple;
     if (
       (!this.inCellsArea(eventX, eventY) && !this.state.isSelectCell) ||
       this.state.isSelectScrollYThumb ||
@@ -2261,7 +2357,8 @@ export class Panel {
     // }
   }
 
-  onMouseUp(event: MouseEvent) {
+  onMouseUp = (event: MouseEvent) => {
+    event.preventDefault();
     // console.log('onmouseup');
     this.state.isSelectCell = false;
     this.state.isSelectScrollYThumb = false;
@@ -2289,7 +2386,7 @@ export class Panel {
     }
     // console.log(this.activeArr);
     // console.log(this.activeCell);
-  }
+  };
 
   createRow(count: number = 1) {
     // const lastModifyTime = new Date('1970-01-01').getTime();
@@ -3931,11 +4028,19 @@ export class Panel {
       for (const item of event.clipboardData.items) {
         if (item.kind === 'file' && /image\/\w*/.test(item.type)) {
           createImageBitmap(item.getAsFile()).then((img) => {
+            const x =
+              this.floatArr.length && !this.activeCell
+                ? this.floatArr[this.floatArr.length - 1].x + this.offsetLeft
+                : this.activeCell.x + this.activeCell.width / 2;
+            const y =
+              this.floatArr.length && !this.activeCell
+                ? this.floatArr[this.floatArr.length - 1].y + this.offsetTop
+                : this.activeCell.y + this.activeCell.height / 2;
             const floatElement = new FloatElement(
-              2 * this.offsetLeft + this.scrollLeft,
-              2 * this.offsetTop + this.scrollTop,
-              img.width * this.multiple,
-              img.height * this.multiple,
+              x,
+              y,
+              img.width,
+              img.height,
               img
             );
             this.floatArr.forEach((elem) => (elem.isActive = false));
@@ -3943,9 +4048,9 @@ export class Panel {
             // this.floatCtx.drawImage(img, floatElement.x, floatElement.y);
             this.drawFloat();
             this.activeArr = [];
-
             floatElement.isActive = true;
-            this.setActive();
+            this.resetCellPerspective(this.activeCell);
+            this.activeCellPos = null;
           });
           return;
         }
@@ -4003,7 +4108,7 @@ export class Panel {
       const width = this.floatArr[i].width;
       const height = this.floatArr[i].height;
       const isActive = this.floatArr[i].isActive;
-      const radius = Style.activeFloatElementResizeArcRadius * this.multiple;
+      const radius = Style.activeFloatElementResizeArcRadius;
       if (
         !inRange(
           x - this.scrollLeft - radius,
@@ -4029,8 +4134,8 @@ export class Panel {
         continue;
       }
       if (
-        inRange(pointX, x - radius, x + width - this.scrollLeft + radius) &&
-        inRange(pointY, y - radius, y + height - this.scrollTop + radius)
+        inRange(pointX + this.scrollLeft, x - radius, x + width + radius) &&
+        inRange(pointY + this.scrollTop, y - radius, y + height + radius)
       ) {
         return this.floatArr[i];
       }
@@ -4050,5 +4155,24 @@ export class Panel {
       }
     }
     return null;
+  }
+
+  clearRect(ctx: CanvasRenderingContext2D) {
+    ctx.clearRect(
+      0,
+      0,
+      this.width / this.multiple,
+      this.height / this.multiple
+    );
+  }
+
+  setTransform() {
+    const scale = this.multiple;
+    this.ctx.transform(scale, 0, 0, scale, 0, 0);
+    this.actionCtx.transform(scale, 0, 0, scale, 0, 0);
+    this.animationCtx.transform(scale, 0, 0, scale, 0, 0);
+    this.floatCtx.transform(scale, 0, 0, scale, 0, 0);
+    // this.offscreenCtx.transform(scale, 0, 0, scale, 0, 0);
+    this.floatActionCtx.transform(scale, 0, 0, scale, 0, 0);
   }
 }
