@@ -53,9 +53,7 @@ export class Panel {
     }
   }
 
-  activeArr: CellRange[] = [
-    { rowStart: 1, columnStart: 1, rowEnd: 1, columnEnd: 1 },
-  ];
+  activeArr: CellRange[] = [];
   unActiveRange: CellRange;
   resizeColumnCell: Cell;
   resizeRowCell: Cell;
@@ -87,6 +85,7 @@ export class Panel {
     this.floatActionCtx = this.floatActionCanvas.getContext('2d');
     this.resize();
     this.activeCellPos = { row: 1, column: 1, rangeIndex: 0 };
+    this.activeArr = [{ rowStart: 1, columnStart: 1, rowEnd: 1, columnEnd: 1 }];
     this.refreshView();
     this.canvas.focus();
     document.onpaste = this.onPaste;
