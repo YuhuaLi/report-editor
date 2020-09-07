@@ -1,3 +1,69 @@
+<button type="button" (click)="toggleCombine()">combine</button>
+<button
+  type="button"
+  (click)="
+    changeCellStyle({
+      fontWeight:
+        (activeCell && activeCell.style.fontWeight === 'bold' && 'normal') ||
+        'bold'
+    })
+  "
+  [ngStyle]="{ 'font-weight': activeCell?.style.fontWeight || 'normal' }"
+>
+  bold
+</button>
+<button
+  type="button"
+  (click)="
+    changeCellStyle({
+      fontStyle:
+        activeCell && activeCell.style.fontStyle === 'italic'
+          ? 'normal'
+          : 'italic'
+    })
+  "
+  [ngStyle]="{ 'font-style': activeCell?.style.fontStyle || 'normal' }"
+>
+  Italic
+</button>
+<button
+  type="button"
+  (click)="changeCellStyle({ textAlign: 'left' })"
+  [ngStyle]="{
+    'box-shadow':
+      activeCell?.style.textAlign === 'left'
+        ? 'inset 2px 2px 10px black, inset -2px -2px 10px #eee'
+        : 'none'
+  }"
+>
+  Left
+</button>
+<button
+  type="button"
+  (click)="changeCellStyle({ textAlign: 'center' })"
+  [ngStyle]="{
+    'box-shadow':
+      activeCell?.style.textAlign === 'center'
+        ? 'inset 2px 2px 10px black, inset -2px -2px 10px #eee'
+        : 'none'
+  }"
+>
+  Center
+</button>
+<button
+  type="button"
+  (click)="changeCellStyle({ textAlign: 'right' })"
+  [ngStyle]="{
+    'box-shadow':
+      activeCell?.style.textAlign === 'right'
+        ? 'inset 2px 2px 10px black, inset -2px -2px 10px #eee'
+        : 'none'
+  }"
+>
+  Right
+</button>
+<button (click)="zoomIn()">zoomIn</button>
+<button (click)="zoomOut()">zoomOut</button>
 <div class="panel panel-wrapper">
   <canvas
     tabindex="0"
@@ -17,14 +83,17 @@
     (keypress)="onKeyPress($event)"
   ></canvas>
   <canvas #actionPanel class="action-panel"></canvas>
+  <canvas #animationPanel class="action-panel"></canvas>
+  <canvas #floatPanel class="action-panel"></canvas>
+  <canvas #floatActionPanel class="action-panel"></canvas>
   <ng-container *ngIf="this.state.isCellEdit">
     <div
       class="mask"
       [ngStyle]="{
-        'left.px': offsetLeft,
-        'top.px': offsetTop,
-        'right.px': scrollBarWidth,
-        'bottom.px': scrollBarWidth
+        'left.px': offsetLeft * multiple,
+        'top.px': offsetTop * multiple,
+        'right.px': scrollBarWidth * multiple,
+        'bottom.px': scrollBarWidth * multiple
       }"
     >
       <div class="mask-content">
@@ -33,11 +102,20 @@
           name="editCell"
           type="text"
           class="editCell"
+          autocomplete="off"
           [ngStyle]="{
-            'left.px': editingCell?.x - scrollLeft - offsetLeft + 1,
-            'top.px': editingCell?.y - scrollTop - offsetTop + 1,
-            'width.px': editingCell?.width - 2,
-            'height.px': editingCell?.height - 2
+            'font-family': 'editingCell?.style.fontFamily',
+            'font-size.pt': editingCell?.style.fontSize / multiple,
+            'padding.px': editingCell?.style.borderWidth / multiple,
+            'left.px':
+              (editingCell?.x - scrollLeft - offsetLeft + 1) / multiple,
+            'top.px': (editingCell?.y - scrollTop - offsetTop + 1) / multiple,
+            'width.px':
+              (editingCell?.width - 2 * editingCell?.style.borderWidth) /
+              multiple,
+            'height.px':
+              (editingCell?.height - 2 * editingCell?.style.borderWidth) /
+              multiple
           }"
           [(ngModel)]="editingCell?.content.value"
           (keydown)="onEditCellKeyDown($event)"
