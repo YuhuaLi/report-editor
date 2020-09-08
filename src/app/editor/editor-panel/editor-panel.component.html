@@ -115,16 +115,16 @@
           autocomplete="off"
           [ngStyle]="{
             'font-family': 'editingCell?.style.fontFamily',
-            'font-size.pt': editingCell?.style.fontSize / multiple,
-            'padding.px': editingCell?.style.borderWidth / multiple,
+            'font-size.pt': editingCell?.style.fontSize * multiple,
+            'padding.px': editingCell?.style.borderWidth * multiple,
             'left.px':
-              (editingCell?.x - scrollLeft - offsetLeft + 1) / multiple,
-            'top.px': (editingCell?.y - scrollTop - offsetTop + 1) / multiple,
+              (editingCell?.x - scrollLeft - offsetLeft + 1) * multiple,
+            'top.px': (editingCell?.y - scrollTop - offsetTop + 1) * multiple,
             'width.px':
-              (editingCell?.width - 2 * editingCell?.style.borderWidth) /
+              (editingCell?.width - 2 * editingCell?.style.borderWidth) *
               multiple,
             'height.px':
-              (editingCell?.height - 2 * editingCell?.style.borderWidth) /
+              (editingCell?.height - 2 * editingCell?.style.borderWidth) *
               multiple
           }"
           [(ngModel)]="editingCell?.content.value"

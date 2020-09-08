@@ -1,27 +1,24 @@
 # ReportEditor
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 9.1.1.
+[Demo](https://yuhuali.github.io/report-editor)
 
-## Development server
+## Completed
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The app will automatically reload if you change any of the source files.
+页面绘制  
+页面滚动  
+单元格编辑  
+设置单元格样式  
+合并单元格  
+拖拽调整行列宽高  
+常用按键事件（Ctrl+a,Ctrl+c,Ctrl+v,PageUp,PageDown,Del,Home,Tab,Enter,Shift+Enter,Shift+Tab,Esc)  
+缩放  
+从Excel文件中粘贴单元格（包含Excel单元的合并及背景色）  
 
-## Code scaffolding
+## Doing
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+图片显示及显示及复制Excel文件中图片  
 
-## Build
+## To Do
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory. Use the `--prod` flag for a production build.
+图片拖拽移动  
 
-## Running unit tests
-
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
-
-## Running end-to-end tests
-
-Run `ng e2e` to execute the end-to-end tests via [Protractor](http://www.protractortest.org/).
-
-## Further help
-
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI README](https://github.com/angular/angular-cli/blob/master/README.md).
