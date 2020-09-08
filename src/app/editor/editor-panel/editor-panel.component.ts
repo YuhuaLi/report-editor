@@ -6,6 +6,7 @@ import {
   AfterViewInit,
   HostListener,
   ChangeDetectorRef,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { Panel } from './panel';
 
@@ -13,6 +14,7 @@ import { Panel } from './panel';
   selector: 'app-editor-panel',
   templateUrl: './editor-panel.component.html',
   styleUrls: ['./editor-panel.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EditorPanelComponent
   extends Panel
@@ -66,6 +68,9 @@ export class EditorPanelComponent
   // ctx: CanvasRenderingContext2D;
   // actionCtx: CanvasRenderingContext2D;
 
+  showFontColorPanel = false;
+  showBackColorPanel = false;
+
   constructor(private elmentRef: ElementRef, private cdr: ChangeDetectorRef) {
     super();
   }
@@ -98,5 +103,25 @@ export class EditorPanelComponent
     this.multiple = this.multiple - 0.2 < 0.2 ? 0.2 : this.multiple - 0.2;
     this.init();
     this.cdr.detectChanges();
+  }
+
+  onBarInputFocus(event) {
+    event.preventDefault();
+    this.editingCell = this.activeCell;
+    this.editingCell.content.previousValue = this.editingCell.content.value;
+  }
+
+  toggleFontColorPanel() {
+    this.showFontColorPanel = !this.showFontColorPanel;
+  }
+  toggleBackColorPanel() {
+    this.showBackColorPanel = !this.showBackColorPanel;
+  }
+  changeColor(event) {
+    if (this.showFontColorPanel) {
+      this.changeCellStyle({ color: event.target.style.backgroundColor });
+    } else if (this.showBackColorPanel) {
+      this.changeCellStyle({ background: event.target.style.backgroundColor });
+    }
   }
 }

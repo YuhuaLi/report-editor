@@ -7,6 +7,7 @@ export class Cell {
   columns?: { x?: number; width?: number }[];
   rows?: { y?: number; height?: number }[];
   position: { row: number; column: number };
+  index: string;
   x: number;
   y: number;
   width: number;

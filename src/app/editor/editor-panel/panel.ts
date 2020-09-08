@@ -215,7 +215,11 @@ export class Panel {
     return {
       columns: this.columns,
       rows: this.rows,
-      position: { row: rk, column: ck },
+      position: {
+        row: rk,
+        column: ck,
+      },
+      index: this.generateColumnNum(ck) + this.generateRowNum(rk),
       get x() {
         if (
           !this.columns[this.position.column] ||
@@ -3449,6 +3453,7 @@ export class Panel {
     this.canvas.focus();
   }
 
+
   onEditCellKeyDown(event: KeyboardEvent) {
     switch (event.code) {
       case KeyCode.Tab:
@@ -3751,6 +3756,7 @@ export class Panel {
       }
     }
     this.refreshView();
+    this.canvas.focus();
   }
 
   onPaste = (event) => {
@@ -4078,12 +4084,18 @@ export class Panel {
   setRowDefaultAttr(attr: string, value: any, row: number) {
     // this.rows[row][name].value = value;
     // this.rows[row][name].lastModifyTime = new Date().getTime();
+    if (!this.rows[row].style) {
+      this.rows[row].style = {};
+    }
     this.rows[row].style[attr] = value;
   }
 
   setColumnDefaultAttr(attr: string, value: any, column: number) {
     // this.columns[column][name].value = value;
     // this.columns[column][name].lastModifyTime = new Date().getTime();
+    if (!this.columns[column].style) {
+      this.columns[column].style = {};
+    }
     this.columns[column].style[attr] = value;
   }
 

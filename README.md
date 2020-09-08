@@ -11,12 +11,11 @@
 合并单元格  
 拖拽调整行列宽高  
 常用按键事件（Ctrl+a,Ctrl+c,Ctrl+v,PageUp,PageDown,Del,Home,Tab,Enter,Shift+Enter,Shift+Tab,Esc)  
-缩放  
 从Excel文件中粘贴单元格（包含Excel单元的合并及背景色）  
+复制Excel文件中图片及显示
 
 ## Doing
-
-图片显示及显示及复制Excel文件中图片  
+缩放
 
 ## To Do
 

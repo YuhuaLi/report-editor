@@ -1,4 +1,4 @@
-<div>
+<div style="position: absolute; right: 0; height: 40px; line-height: 40px">
   <a href="https://github.com/YuhuaLi/report-editor"
     ><img
       style="width: 16px; height: 16px"
@@ -6,9 +6,10 @@
     />GitHub</a
   >
 </div>
-<div>
-  <button type="button" (click)="toggleCombine()">combine</button>
-  <button
+<div class="toolbar">
+  <!-- <button type="button" (click)="toggleCombine()">combine</button> -->
+  <a (click)="toggleCombine()"><i class="iconfont icon-hebingdanyuange"></i></a>
+  <!-- <button
     type="button"
     (click)="
       changeCellStyle({
@@ -20,8 +21,22 @@
     [ngStyle]="{ 'font-weight': activeCell?.style.fontWeight || 'normal' }"
   >
     bold
-  </button>
-  <button
+  </button> -->
+  <a
+    (click)="
+      changeCellStyle({
+        fontWeight:
+          (activeCell && activeCell.style.fontWeight === 'bold' && 'normal') ||
+          'bold'
+      })
+    "
+    ><span
+      class="iconfont"
+      [ngStyle]="{ 'font-weight': activeCell?.style.fontWeight || 'normal' }"
+      >B</span
+    ></a
+  >
+  <!-- <button
     type="button"
     (click)="
       changeCellStyle({
@@ -34,8 +49,23 @@
     [ngStyle]="{ 'font-style': activeCell?.style.fontStyle || 'normal' }"
   >
     Italic
-  </button>
-  <button
+  </button> -->
+  <a
+    (click)="
+      changeCellStyle({
+        fontStyle:
+          activeCell && activeCell.style.fontStyle === 'italic'
+            ? 'normal'
+            : 'italic'
+      })
+    "
+    ><span
+      class="iconfont"
+      [ngStyle]="{ 'font-style': activeCell?.style.fontStyle || 'normal' }"
+      >I</span
+    ></a
+  >
+  <!-- <button
     type="button"
     (click)="changeCellStyle({ textAlign: 'left' })"
     [ngStyle]="{
@@ -46,8 +76,16 @@
     }"
   >
     Left
-  </button>
-  <button
+  </button> -->
+  <a (click)="changeCellStyle({ textAlign: 'left' })"
+    ><i
+      class="iconfont icon-zuoduiqi"
+      [ngStyle]="{
+        color: activeCell?.style.textAlign === 'left' ? 'blue' : 'black'
+      }"
+    ></i
+  ></a>
+  <!-- <button
     type="button"
     (click)="changeCellStyle({ textAlign: 'center' })"
     [ngStyle]="{
@@ -58,8 +96,16 @@
     }"
   >
     Center
-  </button>
-  <button
+  </button> -->
+  <a (click)="changeCellStyle({ textAlign: 'center' })"
+    ><i
+      class="iconfont icon-zuoduiqi"
+      [ngStyle]="{
+        color: activeCell?.style.textAlign === 'center' ? 'blue' : 'black'
+      }"
+    ></i
+  ></a>
+  <!-- <button
     type="button"
     (click)="changeCellStyle({ textAlign: 'right' })"
     [ngStyle]="{
@@ -70,9 +116,54 @@
     }"
   >
     Right
-  </button>
-  <button (click)="zoomIn()">zoomIn</button>
-  <button (click)="zoomOut()">zoomOut</button>
+  </button> -->
+  <a (click)="changeCellStyle({ textAlign: 'right' })"
+    ><i
+      class="iconfont icon-zuoduiqi"
+      [ngStyle]="{
+        color: activeCell?.style.textAlign === 'right' ? 'blue' : 'black'
+      }"
+    ></i
+  ></a>
+  <a (click)="toggleFontColorPanel()" style="position: relative">
+    <i
+      class="iconfont icon-zitiyanse"
+      [ngStyle]="{
+        color: activeCell?.style.color || 'black'
+      }"
+    ></i>
+    <div
+      *ngIf="showFontColorPanel"
+      style="position: absolute; left: 0; top: 44px; z-index: 1000"
+    >
+      <ng-container *ngTemplateOutlet="colorPanel"></ng-container>
+    </div>
+  </a>
+  <a (click)="toggleBackColorPanel()" style="position: relative">
+    <i
+      class="iconfont icon-tianchong"
+      [ngStyle]="{
+        color: activeCell?.style.background || 'black'
+      }"
+    ></i>
+    <div
+      *ngIf="showBackColorPanel"
+      style="position: absolute; left: 0; top: 44px; z-index: 1000"
+    >
+      <ng-container *ngTemplateOutlet="colorPanel"></ng-container>
+    </div>
+  </a>
+  <!-- <button (click)="zoomIn()">zoomIn</button> -->
+  <a (click)="zoomIn()"><i class="iconfont icon-fangda"></i></a>
+  <!-- <button (click)="zoomOut()">zoomOut</button> -->
+  <a (click)="zoomOut()"><i class="iconfont icon-suoxiao"></i></a>
+</div>
+<div class="formula-bar">
+  <label class="bar-label">{{ (activeCell && activeCell.index) || "" }}</label
+  ><input
+    [(ngModel)]="activeCell?.content.value"
+    (focus)="onBarInputFocus($event)"
+  />
 </div>
 <div class="panel panel-wrapper">
   <canvas
@@ -96,7 +187,7 @@
   <canvas #animationPanel class="action-panel"></canvas>
   <canvas #floatPanel class="action-panel"></canvas>
   <canvas #floatActionPanel class="action-panel"></canvas>
-  <ng-container *ngIf="this.state.isCellEdit">
+  <ng-container *ngIf="editingCell">
     <div
       class="mask"
       [ngStyle]="{
@@ -108,13 +199,14 @@
     >
       <div class="mask-content">
         <input
-          appAutoFocus
+          [appAutoFocus]="state.isCellEdit"
           name="editCell"
           type="text"
           class="editCell"
           autocomplete="off"
           [ngStyle]="{
-            'font-family': 'editingCell?.style.fontFamily',
+            'background': editingCell?.style.background,
+            'font-family': editingCell?.style.fontFamily,
             'font-size.pt': editingCell?.style.fontSize * multiple,
             'padding.px': editingCell?.style.borderWidth * multiple,
             'left.px':
@@ -134,3 +226,72 @@
     </div>
   </ng-container>
 </div>
+
+<ng-template #colorPanel>
+  <div class="palette-color-grid">
+    <div>
+      <div class="color-box" style="margin-left: -1px; margin-top: -2px">
+        <div
+          class="inner-box"
+          style="background-color: rgb(157, 157, 157)"
+        ></div>
+      </div>
+      <div class="color-box" style="margin-left: -2px; margin-top: -2px">
+        <div
+          class="inner-box"
+          style="background-color: rgb(38, 38, 38)"
+          (click)="changeColor($event)"
+        ></div>
+      </div>
+      <div class="color-box" style="margin-left: -2px; margin-top: -2px">
+        <div
+          class="inner-box"
+          style="background-color: rgb(204, 0, 0)"
+          (click)="changeColor($event)"
+        ></div>
+      </div>
+      <div class="color-box" style="margin-left: -2px; margin-top: -2px">
+        <div
+          class="inner-box"
+          style="background-color: rgb(231, 82, 0)"
+          (click)="changeColor($event)"
+        ></div>
+      </div>
+      <div class="color-box" style="margin-left: -2px; margin-top: -2px">
+        <div
+          class="inner-box"
+          style="background-color: rgb(255, 183, 0)"
+          (click)="changeColor($event)"
+        ></div>
+      </div>
+      <div class="color-box" style="margin-left: -2px; margin-top: -2px">
+        <div
+          class="inner-box"
+          style="background-color: rgb(103, 143, 0)"
+          (click)="changeColor($event)"
+        ></div>
+      </div>
+      <div class="color-box" style="margin-left: -2px; margin-top: -2px">
+        <div
+          class="inner-box"
+          style="background-color: rgb(1, 136, 251)"
+          (click)="changeColor($event)"
+        ></div>
+      </div>
+      <div class="color-box" style="margin-left: -2px; margin-top: -2px">
+        <div
+          class="inner-box"
+          style="background-color: rgb(39, 65, 177)"
+          (click)="changeColor($event)"
+        ></div>
+      </div>
+      <div class="color-box" style="margin-left: -2px; margin-top: -2px">
+        <div
+          class="inner-box"
+          style="background-color: rgb(255, 255, 255)"
+          (click)="changeColor($event)"
+        ></div>
+      </div>
+    </div>
+  </div>
+</ng-template>
