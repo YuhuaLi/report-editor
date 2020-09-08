@@ -3567,6 +3567,10 @@ export class Panel {
               this.cells[i][j].combineCell = cell;
             }
           }
+          this.activeCellPos = {
+            row: cell.position.row,
+            column: cell.position.column,
+          };
         }
       } else if (
         this.cells[range.rowStart][range.columnStart].rowSpan > 1 ||

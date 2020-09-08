@@ -1,69 +1,79 @@
-<button type="button" (click)="toggleCombine()">combine</button>
-<button
-  type="button"
-  (click)="
-    changeCellStyle({
-      fontWeight:
-        (activeCell && activeCell.style.fontWeight === 'bold' && 'normal') ||
-        'bold'
-    })
-  "
-  [ngStyle]="{ 'font-weight': activeCell?.style.fontWeight || 'normal' }"
->
-  bold
-</button>
-<button
-  type="button"
-  (click)="
-    changeCellStyle({
-      fontStyle:
-        activeCell && activeCell.style.fontStyle === 'italic'
-          ? 'normal'
-          : 'italic'
-    })
-  "
-  [ngStyle]="{ 'font-style': activeCell?.style.fontStyle || 'normal' }"
->
-  Italic
-</button>
-<button
-  type="button"
-  (click)="changeCellStyle({ textAlign: 'left' })"
-  [ngStyle]="{
-    'box-shadow':
-      activeCell?.style.textAlign === 'left'
-        ? 'inset 2px 2px 10px black, inset -2px -2px 10px #eee'
-        : 'none'
-  }"
->
-  Left
-</button>
-<button
-  type="button"
-  (click)="changeCellStyle({ textAlign: 'center' })"
-  [ngStyle]="{
-    'box-shadow':
-      activeCell?.style.textAlign === 'center'
-        ? 'inset 2px 2px 10px black, inset -2px -2px 10px #eee'
-        : 'none'
-  }"
->
-  Center
-</button>
-<button
-  type="button"
-  (click)="changeCellStyle({ textAlign: 'right' })"
-  [ngStyle]="{
-    'box-shadow':
-      activeCell?.style.textAlign === 'right'
-        ? 'inset 2px 2px 10px black, inset -2px -2px 10px #eee'
-        : 'none'
-  }"
->
-  Right
-</button>
-<button (click)="zoomIn()">zoomIn</button>
-<button (click)="zoomOut()">zoomOut</button>
+<div>
+  <a href="https://github.com/YuhuaLi/report-editor"
+    ><img
+      style="width: 16px; height: 16px"
+      src="https://github.githubassets.com/favicons/favicon.png"
+    />GitHub</a
+  >
+</div>
+<div>
+  <button type="button" (click)="toggleCombine()">combine</button>
+  <button
+    type="button"
+    (click)="
+      changeCellStyle({
+        fontWeight:
+          (activeCell && activeCell.style.fontWeight === 'bold' && 'normal') ||
+          'bold'
+      })
+    "
+    [ngStyle]="{ 'font-weight': activeCell?.style.fontWeight || 'normal' }"
+  >
+    bold
+  </button>
+  <button
+    type="button"
+    (click)="
+      changeCellStyle({
+        fontStyle:
+          activeCell && activeCell.style.fontStyle === 'italic'
+            ? 'normal'
+            : 'italic'
+      })
+    "
+    [ngStyle]="{ 'font-style': activeCell?.style.fontStyle || 'normal' }"
+  >
+    Italic
+  </button>
+  <button
+    type="button"
+    (click)="changeCellStyle({ textAlign: 'left' })"
+    [ngStyle]="{
+      'box-shadow':
+        activeCell?.style.textAlign === 'left'
+          ? 'inset 2px 2px 10px black, inset -2px -2px 10px #eee'
+          : 'none'
+    }"
+  >
+    Left
+  </button>
+  <button
+    type="button"
+    (click)="changeCellStyle({ textAlign: 'center' })"
+    [ngStyle]="{
+      'box-shadow':
+        activeCell?.style.textAlign === 'center'
+          ? 'inset 2px 2px 10px black, inset -2px -2px 10px #eee'
+          : 'none'
+    }"
+  >
+    Center
+  </button>
+  <button
+    type="button"
+    (click)="changeCellStyle({ textAlign: 'right' })"
+    [ngStyle]="{
+      'box-shadow':
+        activeCell?.style.textAlign === 'right'
+          ? 'inset 2px 2px 10px black, inset -2px -2px 10px #eee'
+          : 'none'
+    }"
+  >
+    Right
+  </button>
+  <button (click)="zoomIn()">zoomIn</button>
+  <button (click)="zoomOut()">zoomOut</button>
+</div>
 <div class="panel panel-wrapper">
   <canvas
     tabindex="0"
