@@ -19,7 +19,7 @@ export class Panel {
   cells: Cell[][] = [];
   viewCells: Cell[][] = [];
   editingCell: Cell;
-  scrollBarWidth = Style.scrollBarWidth;
+  // scrollBarWidth = this.style.scrollBarWidth;
   state: any = {
     isSelectCell: false,
     isScrollYThumbHover: false,
@@ -76,6 +76,16 @@ export class Panel {
   floatActionCtx: CanvasRenderingContext2D;
 
   historyState = [];
+  style = new Proxy(Style, {
+    get: (obj, prop: string) => {
+      if (prop in obj) {
+        return isNaN(obj[prop]) || !/^scrollBar/i.test(prop)
+          ? obj[prop]
+          : obj[prop] / this.multiple;
+      }
+      return null;
+    },
+  });
 
   init() {
     this.ctx = this.canvas.getContext('2d');
@@ -106,19 +116,20 @@ export class Panel {
     this.floatActionCanvas.width = this.offsetWidth;
     this.floatActionCanvas.height = this.offsetHeight;
     this.offscreenCanvas = document.createElement('canvas');
+    this.offscreenCanvas.width = this.offsetWidth;
+    this.offscreenCanvas.height = this.offsetHeight;
     this.width = this.offsetWidth / this.multiple;
     this.height = this.offsetHeight / this.multiple;
-    this.clientWidth = this.width - this.offsetLeft - Style.scrollBarWidth;
-    this.clientHeight = this.height - this.offsetTop - Style.scrollBarWidth;
-    this.offscreenCanvas.width = this.width;
-    this.offscreenCanvas.height = this.height;
+    this.clientWidth = this.width - this.offsetLeft - this.style.scrollBarWidth;
+    this.clientHeight =
+      this.height - this.offsetTop - this.style.scrollBarWidth;
     this.viewRowCount =
-      Math.ceil((this.height - this.offsetTop) / Style.cellHeight) + 2;
+      Math.ceil((this.height - this.offsetTop) / this.style.cellHeight) + 2;
     if (this.viewCells.length < this.viewRowCount) {
       this.createRow(this.viewRowCount - this.viewCells.length);
     }
     this.viewColumnCount =
-      Math.ceil((this.width - this.offsetLeft) / Style.cellWidth) + 2;
+      Math.ceil((this.width - this.offsetLeft) / this.style.cellWidth) + 2;
     if ((this.viewCells[0] || []).length < this.viewColumnCount) {
       this.createColumn(
         this.viewColumnCount - (this.viewCells[0] || []).length
@@ -290,47 +301,49 @@ export class Panel {
       style: {
         fontWeight:
           isXRuler || isYRuler
-            ? Style.rulerCellFontWeight
+            ? this.style.rulerCellFontWeight
             : this.getCellDefaultAttr('fontWeight', rk, ck) ||
-              Style.cellFontWeight,
+              this.style.cellFontWeight,
         textAlign:
           isXRuler || isYRuler
-            ? (Style.cellTextAlignCenter as CanvasTextAlign)
+            ? (this.style.cellTextAlignCenter as CanvasTextAlign)
             : this.getCellDefaultAttr('textAlign', rk, ck) ||
-              (Style.cellTextAlignLeft as CanvasTextAlign),
+              (this.style.cellTextAlignLeft as CanvasTextAlign),
         textBaseline:
           this.getCellDefaultAttr('textBaseline', rk, ck) ||
-          Style.cellTextBaseline,
+          this.style.cellTextBaseline,
         fontStyle:
-          this.getCellDefaultAttr('fontStyle', rk, ck) || Style.cellFontStyle,
+          this.getCellDefaultAttr('fontStyle', rk, ck) ||
+          this.style.cellFontStyle,
         fontFamily:
           isXRuler || isYRuler
-            ? Style.rulerCellFontFamily
+            ? this.style.rulerCellFontFamily
             : this.getCellDefaultAttr('fontFamily', rk, ck) ||
-              Style.cellFontFamily,
+              this.style.cellFontFamily,
         fontSize:
           isXRuler || isYRuler
-            ? Style.rulerCellFontSize
-            : this.getCellDefaultAttr('fontSize', rk, ck) || Style.cellFontSize,
+            ? this.style.rulerCellFontSize
+            : this.getCellDefaultAttr('fontSize', rk, ck) ||
+              this.style.cellFontSize,
         background:
           (isXRuler && !isYRuler) || (isYRuler && !isXRuler)
-            ? Style.rulerCellBackgroundColor
+            ? this.style.rulerCellBackgroundColor
             : this.getCellDefaultAttr('background', rk, ck) ||
-              Style.cellBackgroundColor,
+              this.style.cellBackgroundColor,
         color:
           isXRuler || isYRuler
-            ? Style.rulerCellColor
-            : this.getCellDefaultAttr('color', rk, ck) || Style.cellColor,
+            ? this.style.rulerCellColor
+            : this.getCellDefaultAttr('color', rk, ck) || this.style.cellColor,
         borderWidth:
           isXRuler || isYRuler
-            ? Style.rulerCellBorderWidth
+            ? this.style.rulerCellBorderWidth
             : this.getCellDefaultAttr('borderWidth', rk, ck) ||
-              Style.cellBorderWidth,
+              this.style.cellBorderWidth,
         borderColor:
           isXRuler || isYRuler
-            ? Style.rulerCellBorderColor
+            ? this.style.rulerCellBorderColor
             : this.getCellDefaultAttr('borderColor', rk, ck) ||
-              Style.cellBorderColor,
+              this.style.cellBorderColor,
       },
       rowSpan: 1,
       colSpan: 1,
@@ -356,41 +369,41 @@ export class Panel {
   /** 绘制横向滚动条 */
   drawScrollBarX(ctx: CanvasRenderingContext2D) {
     ctx.save();
-    ctx.fillStyle = Style.scrollBarBackgroundColor;
-    ctx.strokeStyle = Style.scrollBarBorderColor;
-    ctx.lineWidth = Style.scrollBarBorderWidth;
+    ctx.fillStyle = this.style.scrollBarBackgroundColor;
+    ctx.strokeStyle = this.style.scrollBarBorderColor;
+    ctx.lineWidth = this.style.scrollBarBorderWidth;
     ctx.fillRect(
       this.offsetLeft,
-      this.height - Style.scrollBarWidth,
-      this.width - Style.scrollBarWidth,
+      this.height - this.style.scrollBarWidth,
+      this.width - this.style.scrollBarWidth,
       this.height
     );
     ctx.strokeRect(
       this.offsetLeft,
-      this.height - Style.scrollBarWidth,
-      this.width - Style.scrollBarWidth - this.offsetLeft,
+      this.height - this.style.scrollBarWidth,
+      this.width - this.style.scrollBarWidth - this.offsetLeft,
       this.height
     );
     ctx.fillRect(
-      this.width - Style.scrollBarWidth,
+      this.width - this.style.scrollBarWidth,
       this.offsetTop,
       this.width,
-      this.height - Style.scrollBarWidth
+      this.height - this.style.scrollBarWidth
     );
     ctx.fillStyle =
       this.state.isScrollXThumbHover || this.state.isSelectScrollXThumb
-        ? Style.scrollBarThumbActiveColor
-        : Style.scrollBarThumbColor;
+        ? this.style.scrollBarThumbActiveColor
+        : this.style.scrollBarThumbColor;
 
     const scrollXThumbHeight = this.getScrollXThumbHeight();
 
     this.roundedRect(
       ctx,
       this.getScrollXThumbLeft(scrollXThumbHeight),
-      this.height - Style.scrollBarWidth + Style.scrollBarThumbMargin,
+      this.height - this.style.scrollBarWidth + this.style.scrollBarThumbMargin,
       scrollXThumbHeight,
-      Style.scrollBarWidth - 2 * Style.scrollBarThumbMargin,
-      Style.scrollBarThumbRadius
+      this.style.scrollBarWidth - 2 * this.style.scrollBarThumbMargin,
+      this.style.scrollBarThumbRadius
     );
 
     ctx.restore();
@@ -399,35 +412,35 @@ export class Panel {
   /** 绘制纵向滚动条 */
   drawScrollBarY(ctx: CanvasRenderingContext2D) {
     ctx.save();
-    ctx.fillStyle = Style.scrollBarBackgroundColor;
-    ctx.strokeStyle = Style.scrollBarBorderColor;
-    ctx.lineWidth = Style.scrollBarBorderWidth;
+    ctx.fillStyle = this.style.scrollBarBackgroundColor;
+    ctx.strokeStyle = this.style.scrollBarBorderColor;
+    ctx.lineWidth = this.style.scrollBarBorderWidth;
     ctx.fillRect(
-      this.width - Style.scrollBarWidth,
-      this.height - Style.scrollBarWidth,
+      this.width - this.style.scrollBarWidth,
+      this.height - this.style.scrollBarWidth,
       this.width,
       this.height
     );
     ctx.strokeRect(
-      this.width - Style.scrollBarWidth,
+      this.width - this.style.scrollBarWidth,
       this.offsetTop,
       this.width,
-      this.height - Style.scrollBarWidth - this.offsetTop
+      this.height - this.style.scrollBarWidth - this.offsetTop
     );
 
     ctx.fillStyle =
       this.state.isScrollYThumbHover || this.state.isSelectScrollYThumb
-        ? Style.scrollBarThumbActiveColor
-        : Style.scrollBarThumbColor;
+        ? this.style.scrollBarThumbActiveColor
+        : this.style.scrollBarThumbColor;
 
     const scrollYThumbHeight = this.getScrollYThumbHeight();
     this.roundedRect(
       ctx,
-      this.width - Style.scrollBarWidth + Style.scrollBarThumbMargin,
+      this.width - this.style.scrollBarWidth + this.style.scrollBarThumbMargin,
       this.getScrollYThumbTop(scrollYThumbHeight),
-      Style.scrollBarWidth - 2 * Style.scrollBarThumbMargin,
+      this.style.scrollBarWidth - 2 * this.style.scrollBarThumbMargin,
       scrollYThumbHeight,
-      Style.scrollBarThumbRadius
+      this.style.scrollBarThumbRadius
     );
     ctx.restore();
   }
@@ -469,7 +482,7 @@ export class Panel {
     const rows = this.viewCells.slice(1).map((cells) => cells[0]);
     ctx.textAlign = columns[0].style.textAlign as CanvasTextAlign;
     ctx.textBaseline = columns[0].style.textBaseline as CanvasTextBaseline;
-    ctx.strokeStyle = Style.rulerCellBorderColor;
+    ctx.strokeStyle = this.style.rulerCellBorderColor;
     if (
       ctx.font !==
       `${columns[0].style.fontStyle} ${columns[0].style.fontWeight} ${columns[0].style.fontSize}pt ${columns[0].style.fontFamily}`
@@ -477,21 +490,6 @@ export class Panel {
       ctx.font = `${columns[0].style.fontStyle} ${columns[0].style.fontWeight} ${columns[0].style.fontSize}pt ${columns[0].style.fontFamily}`;
     }
     for (let len = columns.length, i = len - 1; i >= 0; i--) {
-      // if (
-      //   this.activeArr.length &&
-      //   this.activeArr.find((range) =>
-      //     inRange(
-      //       columns[i].position.column,
-      //       range.columnStart,
-      //       range.columnEnd,
-      //       true
-      //     )
-      //   )
-      // ) {
-      //   ctx.fillStyle = Style.activeRulerCellBacgroundColor;
-      // } else if (ctx.fillStyle !== Style.rulerCellBackgroundColor) {
-      //   ctx.fillStyle = Style.rulerCellBackgroundColor;
-      // }
       if (columns[i].width === 0) {
         continue;
       }
@@ -500,51 +498,79 @@ export class Panel {
         columns[i].x -
         this.scrollLeft +
         (columns[i - 1] && !columns[i - 1].width
-          ? Style.rulerResizeGapWidth / 2
-          : 0) +
-        0.5;
-      const y = columns[i].y + 0.5;
+          ? this.style.rulerResizeGapWidth / 2
+          : 0);
+      const y = columns[i].y;
       const width =
         columns[i].width -
         (columns[i + 1] && !columns[i + 1].width
-          ? Style.rulerResizeGapWidth / 2
+          ? this.style.rulerResizeGapWidth / 2
           : 0) -
         (columns[i - 1] && !columns[i - 1].width
-          ? Style.rulerResizeGapWidth / 2
+          ? this.style.rulerResizeGapWidth / 2
           : 0);
       const height = columns[i].height;
-      ctx.fillRect(x, y, width, height);
-      ctx.strokeRect(x, y, width, height);
+      let cellCtx: CanvasRenderingContext2D;
+      const clip =
+        columns[i].content.value &&
+        ctx.measureText(columns[i].content.value).width > width;
+      if (clip) {
+        cellCtx = this.offscreenCtx;
+        cellCtx.clearRect(0, 0, this.width, this.height);
+        cellCtx.save();
+        cellCtx.textAlign = columns[i].style.textAlign as CanvasTextAlign;
+        cellCtx.textBaseline = columns[i].style.textBaseline as CanvasTextBaseline;
+        cellCtx.strokeStyle = this.style.rulerCellBorderColor;
+        cellCtx.font = ctx.font = `${columns[i].style.fontStyle} ${columns[i].style.fontWeight} ${columns[i].style.fontSize}pt ${columns[i].style.fontFamily}`;
+        cellCtx.fillStyle = columns[i].style.background;
+      } else {
+        cellCtx = ctx;
+        cellCtx.save();
+      }
+      cellCtx.fillRect(x, y, width, height);
+      cellCtx.strokeRect(x + 0.5, y + 0.5, width, height);
       if (columns[i].content.value) {
-        ctx.fillStyle = columns[0].style.color;
-        ctx.fillText(
+        cellCtx.fillStyle = columns[0].style.color;
+        cellCtx.fillText(
           columns[i].content.value,
           x + width / 2,
-          columns[i].y + columns[i].height / 2,
-          width - 2 * columns[0].style.borderWidth
+          columns[i].y + columns[i].height / 2
         );
       }
+      if (clip) {
+        ctx.drawImage(
+          cellCtx.canvas,
+          x * this.multiple,
+          y * this.multiple,
+          width * this.multiple,
+          height * this.multiple,
+          x,
+          y,
+          width,
+          height
+        );
+      }
+      cellCtx.restore();
     }
     for (let len = rows.length, i = len - 1; i >= 0; i--) {
       if (rows[i].height === 0) {
         continue;
       }
-      const x = rows[i].x + 0.5;
+      const x = rows[i].x;
       const y =
         rows[i].y -
         this.scrollTop +
         (rows[i - 1] && !rows[i - 1].height
-          ? Style.rulerResizeGapWidth / 2
-          : 0) +
-        0.5;
+          ? this.style.rulerResizeGapWidth / 2
+          : 0);
       const width = rows[i].width;
       const height =
         rows[i].height -
         (rows[i + 1] && !rows[i + 1].height
-          ? Style.rulerResizeGapWidth / 2
+          ? this.style.rulerResizeGapWidth / 2
           : 0) -
         (rows[i - 1] && !rows[i - 1].height
-          ? Style.rulerResizeGapWidth / 2
+          ? this.style.rulerResizeGapWidth / 2
           : 0);
       let cellCtx: CanvasRenderingContext2D;
       const clip =
@@ -560,7 +586,7 @@ export class Panel {
       cellCtx.save();
       cellCtx.textAlign = rows[i].style.textAlign as CanvasTextAlign;
       cellCtx.textBaseline = rows[i].style.textBaseline as CanvasTextBaseline;
-      cellCtx.strokeStyle = Style.rulerCellBorderColor;
+      cellCtx.strokeStyle = this.style.rulerCellBorderColor;
       cellCtx.font = ctx.font = `${rows[i].style.fontStyle} ${rows[i].style.fontWeight} ${rows[i].style.fontSize}pt ${rows[i].style.fontFamily}`;
       // if (
       //   this.activeArr.length &&
@@ -568,13 +594,13 @@ export class Panel {
       //     inRange(rows[i].position.row, range.rowStart, range.rowEnd, true)
       //   )
       // ) {
-      //   cellCtx.fillStyle = Style.activeRulerCellBacgroundColor;
-      // } else if (ctx.fillStyle !== Style.rulerCellBackgroundColor) {
-      //   cellCtx.fillStyle = Style.rulerCellBackgroundColor;
+      //   cellCtx.fillStyle = this.style.activeRulerCellBacgroundColor;
+      // } else if (ctx.fillStyle !== this.style.rulerCellBackgroundColor) {
+      //   cellCtx.fillStyle = this.style.rulerCellBackgroundColor;
       // }
       cellCtx.fillStyle = rows[i].style.background;
       cellCtx.fillRect(x, y, width, height);
-      cellCtx.strokeRect(x, y, width, height);
+      cellCtx.strokeRect(x + 0.5, y + 0.5, width, height);
       if (rows[i].content.value) {
         cellCtx.fillStyle = columns[0].style.color;
         cellCtx.fillText(
@@ -587,10 +613,10 @@ export class Panel {
       if (clip) {
         ctx.drawImage(
           cellCtx.canvas,
-          rows[i].x,
-          y,
-          rows[i].width,
-          height,
+          rows[i].x * this.multiple,
+          y * this.multiple,
+          rows[i].width * this.multiple,
+          height * this.multiple,
           rows[i].x,
           y,
           rows[i].width,
@@ -600,26 +626,26 @@ export class Panel {
       cellCtx.restore();
     }
 
-    ctx.fillStyle = Style.cellBackgroundColor;
-    ctx.fillRect(0.5, 0.5, this.offsetLeft, this.offsetTop);
-    ctx.strokeRect(0.5, 0.5, this.offsetLeft, this.offsetTop);
-    ctx.fillStyle = Style.activeRulerCellBacgroundColor;
+    ctx.fillStyle = this.style.cellBackgroundColor;
+    ctx.fillRect(0, 0, this.offsetLeft, this.offsetTop);
+    ctx.strokeRect(0, 0, this.offsetLeft, this.offsetTop);
+    ctx.fillStyle = this.style.activeRulerCellBacgroundColor;
     ctx.beginPath();
     ctx.moveTo(
       this.offsetLeft -
-        Style.rulerResizeGapWidth -
-        Style.allCellTriangleSideChief,
-      this.offsetTop - Style.rulerResizeGapWidth
+        this.style.rulerResizeGapWidth -
+        this.style.allCellTriangleSideChief,
+      this.offsetTop - this.style.rulerResizeGapWidth
     );
     ctx.lineTo(
-      this.offsetLeft - Style.rulerResizeGapWidth,
-      this.offsetTop - Style.rulerResizeGapWidth
+      this.offsetLeft - this.style.rulerResizeGapWidth,
+      this.offsetTop - this.style.rulerResizeGapWidth
     );
     ctx.lineTo(
-      this.offsetLeft - Style.rulerResizeGapWidth,
+      this.offsetLeft - this.style.rulerResizeGapWidth,
       this.offsetTop -
-        Style.rulerResizeGapWidth -
-        Style.allCellTriangleSideChief
+        this.style.rulerResizeGapWidth -
+        this.style.allCellTriangleSideChief
     );
     ctx.fill();
     ctx.closePath();
@@ -649,10 +675,10 @@ export class Panel {
     this.floatCtx.clearRect(0, 0, this.width, this.height);
     this.floatCtx.drawImage(
       ctx.canvas,
-      this.offsetLeft,
-      this.offsetTop,
-      this.clientWidth,
-      this.clientHeight,
+      this.offsetLeft * this.multiple,
+      this.offsetTop * this.multiple,
+      this.clientWidth * this.multiple,
+      this.clientHeight * this.multiple,
       this.offsetLeft,
       this.offsetTop,
       this.clientWidth,
@@ -670,12 +696,10 @@ export class Panel {
     const cell = drawCell.isCombined ? drawCell.combineCell : drawCell;
     const x =
       cell.x -
-      (cell.type === 'rulerY' || cell.type === 'all  ' ? 0 : this.scrollLeft) +
-      0.5;
+      (cell.type === 'rulerY' || cell.type === 'all  ' ? 0 : this.scrollLeft);
     const y =
       cell.y -
-      (cell.type === 'rulerX' || cell.type === 'all' ? 0 : this.scrollTop) +
-      0.5;
+      (cell.type === 'rulerX' || cell.type === 'all' ? 0 : this.scrollTop);
     const width = cell.width;
     const height = cell.height;
     let cellCtx: CanvasRenderingContext2D;
@@ -709,7 +733,7 @@ export class Panel {
     if (cellCtx.strokeStyle !== cell.style.borderColor) {
       cellCtx.strokeStyle = cell.style.borderColor;
     }
-    cellCtx.strokeRect(x, y, width, height);
+    cellCtx.strokeRect(x + 0.5, y + 0.5, width, height);
     if (cell.content.value && clip) {
       if (
         cellCtx.font !==
@@ -734,9 +758,9 @@ export class Panel {
       cellCtx.fillText(
         cell.content.value,
         x +
-          (cell.style.textAlign === Style.cellTextAlignCenter
+          (cell.style.textAlign === this.style.cellTextAlignCenter
             ? width / 2
-            : cell.style.textAlign === Style.cellTextAlignRight
+            : cell.style.textAlign === this.style.cellTextAlignRight
             ? width - 2 * cell.style.borderWidth
             : cell.style.borderWidth),
         y + height / 2
@@ -745,7 +769,17 @@ export class Panel {
     }
 
     if (clip) {
-      ctx.drawImage(cellCtx.canvas, x, y, width, height, x, y, width, height);
+      ctx.drawImage(
+        cellCtx.canvas,
+        x * this.multiple,
+        y * this.multiple,
+        width * this.multiple,
+        height * this.multiple,
+        x,
+        y,
+        width,
+        height
+      );
       cellCtx.restore();
     }
   }
@@ -760,18 +794,18 @@ export class Panel {
     this.cells[0]
       .slice(1)
       .forEach(
-        (cell) => (cell.style.background = Style.rulerCellBackgroundColor)
+        (cell) => (cell.style.background = this.style.rulerCellBackgroundColor)
       );
     this.cells
       .slice(1)
       .forEach(
-        (row) => (row[0].style.background = Style.rulerCellBackgroundColor)
+        (row) => (row[0].style.background = this.style.rulerCellBackgroundColor)
       );
     if (this.floatArr.find((elem) => elem.isActive)) {
-      ctx.lineWidth = Style.activeFloatElementBorderWidth;
-      ctx.strokeStyle = Style.activeFloatElementBorderColor;
+      ctx.lineWidth = this.style.activeFloatElementBorderWidth;
+      ctx.strokeStyle = this.style.activeFloatElementBorderColor;
       ctx.fillStyle = '#fff';
-      const radius = Style.activeFloatElementResizeArcRadius;
+      const radius = this.style.activeFloatElementResizeArcRadius;
       for (const elem of this.floatArr) {
         if (elem.isActive) {
           const x = elem.x - this.scrollLeft;
@@ -823,10 +857,10 @@ export class Panel {
       }
       this.floatActionCtx.drawImage(
         ctx.canvas,
-        this.offsetLeft,
-        this.offsetTop,
-        this.clientWidth,
-        this.clientHeight,
+        this.offsetLeft * this.multiple,
+        this.offsetTop * this.multiple,
+        this.clientWidth * this.multiple,
+        this.clientHeight * this.multiple,
         this.offsetLeft,
         this.offsetTop,
         this.clientWidth,
@@ -860,38 +894,36 @@ export class Panel {
 
           this.cells[0].forEach((cell, index) => {
             if (index && inRange(index, columnStart, columnEnd, true)) {
-              cell.style.background = Style.activeRulerCellBacgroundColor;
+              cell.style.background = this.style.activeRulerCellBacgroundColor;
             }
           });
           this.cells.forEach((row, index) => {
             if (index && inRange(index, rowStart, rowEnd, true)) {
-              row[0].style.background = Style.activeRulerCellBacgroundColor;
+              row[0].style.background = this.style.activeRulerCellBacgroundColor;
             }
           });
 
-          ctx.fillStyle = Style.selectedCellBackgroundColor;
+          ctx.fillStyle = this.style.selectedCellBackgroundColor;
           ctx.fillRect(
             this.cells[rowStart][columnStart].x -
               this.scrollLeft +
-              3 * Style.cellBorderWidth +
-              0.5,
+              3 * this.style.cellBorderWidth,
             this.cells[rowStart][columnStart].y -
               this.scrollTop +
-              3 * Style.cellBorderWidth +
-              0.5,
+              3 * this.style.cellBorderWidth,
             this.cells[rowEnd][columnEnd].x -
               this.cells[rowStart][columnStart].x +
               this.cells[rowEnd][columnEnd].width -
-              6 * Style.cellBorderWidth,
+              6 * this.style.cellBorderWidth,
             this.cells[rowEnd][columnEnd].y -
               this.cells[rowStart][columnStart].y +
               this.cells[rowEnd][columnEnd].height -
-              6 * Style.cellBorderWidth
+              6 * this.style.cellBorderWidth
           );
           if (this.activeCellPos) {
             ctx.restore();
-            ctx.strokeStyle = Style.activeCellBorderColor;
-            ctx.lineWidth = Style.cellBorderWidth;
+            ctx.strokeStyle = this.style.activeCellBorderColor;
+            ctx.lineWidth = this.style.cellBorderWidth;
             const cell = this.cells[this.activeCellPos.row][
               this.activeCellPos.column
             ].isCombined
@@ -899,16 +931,16 @@ export class Panel {
                   .combineCell
               : this.cells[this.activeCellPos.row][this.activeCellPos.column];
             ctx.clearRect(
-              cell.x - this.scrollLeft + 0.5,
-              cell.y - this.scrollTop + 0.5,
+              cell.x - this.scrollLeft,
+              cell.y - this.scrollTop,
               cell.width,
               cell.height
             );
             ctx.strokeRect(
-              cell.x - this.scrollLeft + 3 * Style.cellBorderWidth + 0.5,
-              cell.y - this.scrollTop + 3 * Style.cellBorderWidth + 0.5,
-              cell.width - 6 * Style.cellBorderWidth,
-              cell.height - 6 * Style.cellBorderWidth
+              cell.x - this.scrollLeft + 3 * this.style.cellBorderWidth,
+              cell.y - this.scrollTop + 3 * this.style.cellBorderWidth,
+              cell.width - 6 * this.style.cellBorderWidth,
+              cell.height - 6 * this.style.cellBorderWidth
             );
           }
         }
@@ -932,19 +964,19 @@ export class Panel {
 
         this.cells[0].forEach((cell, index) => {
           if (index && inRange(index, columnStart, columnEnd, true)) {
-            cell.style.background = Style.activeRulerCellBacgroundColor;
+            cell.style.background = this.style.activeRulerCellBacgroundColor;
           }
         });
         this.cells.forEach((row, index) => {
           if (index && inRange(index, rowStart, rowEnd, true)) {
-            row[0].style.background = Style.activeRulerCellBacgroundColor;
+            row[0].style.background = this.style.activeRulerCellBacgroundColor;
           }
         });
 
-        ctx.fillStyle = Style.selectedCellBackgroundColor;
+        ctx.fillStyle = this.style.selectedCellBackgroundColor;
         ctx.fillRect(
-          this.cells[rowStart][columnStart].x - this.scrollLeft + 0.5,
-          this.cells[rowStart][columnStart].y - this.scrollTop + 0.5,
+          this.cells[rowStart][columnStart].x - this.scrollLeft,
+          this.cells[rowStart][columnStart].y - this.scrollTop,
           this.cells[rowEnd][columnEnd].x -
             this.cells[rowStart][columnStart].x +
             this.cells[rowEnd][columnEnd].width,
@@ -960,19 +992,19 @@ export class Panel {
                 .combineCell
             : this.cells[this.activeCellPos.row][this.activeCellPos.column];
           ctx.clearRect(
-            cell.x - this.scrollLeft + 0.5,
-            cell.y - this.scrollTop + 0.5,
+            cell.x - this.scrollLeft,
+            cell.y - this.scrollTop,
             cell.width,
             cell.height
           );
         }
-        ctx.strokeStyle = Style.activeCellBorderColor;
-        ctx.lineWidth = Style.cellBorderWidth;
-        // ctx.shadowColor = Style.activeCellShadowColor;
-        // ctx.shadowBlur = Style.activeCellShadowBlur;
+        ctx.strokeStyle = this.style.activeCellBorderColor;
+        ctx.lineWidth = this.style.cellBorderWidth;
+        // ctx.shadowColor = this.style.activeCellShadowColor;
+        // ctx.shadowBlur = this.style.activeCellShadowBlur;
         ctx.strokeRect(
-          this.cells[rowStart][columnStart].x - this.scrollLeft + 0.5,
-          this.cells[rowStart][columnStart].y - this.scrollTop + 0.5,
+          this.cells[rowStart][columnStart].x - this.scrollLeft,
+          this.cells[rowStart][columnStart].y - this.scrollTop,
           this.cells[rowEnd][columnEnd].x -
             this.cells[rowStart][columnStart].x +
             this.cells[rowEnd][columnEnd].width,
@@ -1006,13 +1038,13 @@ export class Panel {
           ),
           this.viewCells[0][this.viewCells[0].length - 1].position.column
         );
-        ctx.strokeStyle = Style.cellBorderColor;
-        ctx.lineWidth = 2 * Style.cellBorderWidth;
-        ctx.fillStyle = Style.unSelectedCellBackgroundColor;
+        ctx.strokeStyle = this.style.cellBorderColor;
+        ctx.lineWidth = 2 * this.style.cellBorderWidth;
+        ctx.fillStyle = this.style.unSelectedCellBackgroundColor;
         ctx.beginPath();
         ctx.rect(
-          this.cells[rowStart][columnStart].x - this.scrollLeft + 0.5,
-          this.cells[rowStart][columnStart].y - this.scrollTop + 0.5,
+          this.cells[rowStart][columnStart].x - this.scrollLeft,
+          this.cells[rowStart][columnStart].y - this.scrollTop,
           this.cells[rowEnd][columnEnd].x -
             this.cells[rowStart][columnStart].x +
             this.cells[rowEnd][columnEnd].width,
@@ -1026,10 +1058,10 @@ export class Panel {
       }
       this.actionCtx.drawImage(
         ctx.canvas,
-        this.offsetLeft,
-        this.offsetTop,
-        this.clientWidth,
-        this.clientHeight,
+        this.offsetLeft * this.multiple,
+        this.offsetTop * this.multiple,
+        this.clientWidth * this.multiple,
+        this.clientHeight * this.multiple,
         this.offsetLeft,
         this.offsetTop,
         this.clientWidth,
@@ -1071,33 +1103,33 @@ export class Panel {
         ),
         this.viewCells[0][this.viewCells[0].length - 1].position.column
       );
-      ctx.strokeStyle = Style.activeCellBorderColor;
-      ctx.lineWidth = Style.cellBorderWidth;
+      ctx.strokeStyle = this.style.activeCellBorderColor;
+      ctx.lineWidth = this.style.cellBorderWidth;
       ctx.setLineDash([8, 2]);
       ctx.lineDashOffset = -1 * offset;
       ctx.strokeRect(
         this.cells[rowStart][columnStart].x -
           this.scrollLeft +
-          Style.cellBorderWidth,
+          this.style.cellBorderWidth,
         this.cells[rowStart][columnStart].y -
           this.scrollTop +
-          Style.cellBorderWidth,
+          this.style.cellBorderWidth,
         this.cells[rowEnd][columnEnd].x -
           this.cells[rowStart][columnStart].x +
           this.cells[rowEnd][columnEnd].width -
-          2 * Style.cellBorderWidth,
+          2 * this.style.cellBorderWidth,
         this.cells[rowEnd][columnEnd].y -
           this.cells[rowStart][columnStart].y +
           this.cells[rowEnd][columnEnd].height -
-          2 * Style.cellBorderWidth
+          2 * this.style.cellBorderWidth
       );
 
       this.animationCtx.drawImage(
         ctx.canvas,
-        this.offsetLeft,
-        this.offsetTop,
-        this.clientWidth,
-        this.clientHeight,
+        this.offsetLeft * this.multiple,
+        this.offsetTop * this.multiple,
+        this.clientWidth * this.multiple,
+        this.clientHeight * this.multiple,
         this.offsetLeft,
         this.offsetTop,
         this.clientWidth,
@@ -1228,11 +1260,11 @@ export class Panel {
             columns[i].x -
               this.scrollLeft +
               columns[i].width -
-              Style.rulerResizeGapWidth,
+              this.style.rulerResizeGapWidth,
             columns[i].x -
               this.scrollLeft +
               columns[i].width +
-              Style.rulerResizeGapWidth
+              this.style.rulerResizeGapWidth
           )
         ) {
           return true;
@@ -1253,11 +1285,11 @@ export class Panel {
             rows[i].y -
               this.scrollTop +
               rows[i].height -
-              Style.rulerResizeGapWidth,
+              this.style.rulerResizeGapWidth,
             rows[i].y -
               this.scrollTop +
               rows[i].height +
-              Style.rulerResizeGapWidth
+              this.style.rulerResizeGapWidth
           )
         ) {
           return true;
@@ -1306,8 +1338,8 @@ export class Panel {
   getScrollXThumbHeight() {
     let scrollXThumbHeight =
       (this.clientWidth / this.scrollWidth) * this.clientWidth;
-    if (scrollXThumbHeight < Style.scrollBarThumbMinSize) {
-      scrollXThumbHeight = Style.scrollBarThumbMinSize;
+    if (scrollXThumbHeight < this.style.scrollBarThumbMinSize) {
+      scrollXThumbHeight = this.style.scrollBarThumbMinSize;
     }
     return scrollXThumbHeight;
   }
@@ -1336,8 +1368,8 @@ export class Panel {
   getScrollYThumbHeight() {
     let scrollYThumbHeight =
       (this.clientHeight / this.scrollHeight) * this.clientHeight;
-    if (scrollYThumbHeight < Style.scrollBarThumbMinSize) {
-      scrollYThumbHeight = Style.scrollBarThumbMinSize;
+    if (scrollYThumbHeight < this.style.scrollBarThumbMinSize) {
+      scrollYThumbHeight = this.style.scrollBarThumbMinSize;
     }
     return scrollYThumbHeight;
   }
@@ -1368,7 +1400,7 @@ export class Panel {
     this.canvas.focus();
     // console.log('mousedown', event);
 
-    if (this.state.isCellEdit) {
+    if (this.state.isCellEdit || this.editingCell) {
       this.editCellCompelte();
     }
 
@@ -1409,16 +1441,16 @@ export class Panel {
       for (let i = 1, len = this.viewCells[0].length - 1; i < len; i++) {
         if (
           this.viewCells[0][i].width >
-            (i === 1 ? 1 : 2) * Style.rulerResizeGapWidth &&
+            (i === 1 ? 1 : 2) * this.style.rulerResizeGapWidth &&
           inRange(
             eventX,
             this.viewCells[0][i].x -
               this.scrollLeft +
-              (i === 1 ? 0 : Style.rulerResizeGapWidth),
+              (i === 1 ? 0 : this.style.rulerResizeGapWidth),
             this.viewCells[0][i].x -
               this.scrollLeft +
               this.viewCells[0][i].width -
-              Style.rulerResizeGapWidth,
+              this.style.rulerResizeGapWidth,
             true
           )
         ) {
@@ -1471,16 +1503,16 @@ export class Panel {
             eventX,
             this.viewCells[0][i].x +
               this.viewCells[0][i].width -
-              Style.rulerResizeGapWidth <
+              this.style.rulerResizeGapWidth <
               this.viewCells[0][i].x
               ? this.viewCells[0][i].x - this.scrollLeft
               : this.viewCells[0][i].x -
                   this.scrollLeft +
                   this.viewCells[0][i].width -
-                  Style.rulerResizeGapWidth,
+                  this.style.rulerResizeGapWidth,
             this.viewCells[0][i].x +
               this.viewCells[0][i].width +
-              Style.rulerResizeGapWidth >
+              this.style.rulerResizeGapWidth >
               this.viewCells[0][i + 1].x + this.viewCells[0][i + 1].width
               ? this.viewCells[0][i + 1].width
                 ? this.viewCells[0][i + 1].x + this.viewCells[0][i + 1].width
@@ -1490,7 +1522,7 @@ export class Panel {
               : this.viewCells[0][i].x -
                   this.scrollLeft +
                   this.viewCells[0][i].width +
-                  Style.rulerResizeGapWidth,
+                  this.style.rulerResizeGapWidth,
             true
           )
         ) {
@@ -1503,12 +1535,12 @@ export class Panel {
                   this.ctx.font = `${cur.style.fontStyle} ${cur.style.fontWeight} ${cur.style.fontSize}pt ${cur.style.fontFamily}`;
                   if (
                     this.ctx.measureText(cur.content.value).width +
-                      2 * Style.cellBorderWidth >
+                      2 * this.style.cellBorderWidth >
                     acc
                   ) {
                     return (
                       this.ctx.measureText(cur.content.value).width +
-                      2 * Style.cellBorderWidth
+                      2 * this.style.cellBorderWidth
                     );
                   }
                 }
@@ -1533,16 +1565,17 @@ export class Panel {
       const rowCells = this.viewCells.map((row) => row[0]);
       for (let i = 1, len = rowCells.length - 1; i < len; i++) {
         if (
-          rowCells[i].height > (i === 1 ? 1 : 2) * Style.rulerResizeGapWidth &&
+          rowCells[i].height >
+            (i === 1 ? 1 : 2) * this.style.rulerResizeGapWidth &&
           inRange(
             eventY,
             rowCells[i].y -
               this.scrollTop +
-              (i === 1 ? 0 : Style.rulerResizeGapWidth),
+              (i === 1 ? 0 : this.style.rulerResizeGapWidth),
             rowCells[i].y -
               this.scrollTop +
               rowCells[i].height -
-              Style.rulerResizeGapWidth,
+              this.style.rulerResizeGapWidth,
             true
           )
         ) {
@@ -1593,14 +1626,18 @@ export class Panel {
         } else if (
           inRange(
             eventY,
-            rowCells[i].y + rowCells[i].height - Style.rulerResizeGapWidth <
+            rowCells[i].y +
+              rowCells[i].height -
+              this.style.rulerResizeGapWidth <
               rowCells[i].y
               ? rowCells[i].y - this.scrollTop
               : rowCells[i].y -
                   this.scrollTop +
                   rowCells[i].height -
-                  Style.rulerResizeGapWidth,
-            rowCells[i].y + rowCells[i].height + Style.rulerResizeGapWidth >
+                  this.style.rulerResizeGapWidth,
+            rowCells[i].y +
+              rowCells[i].height +
+              this.style.rulerResizeGapWidth >
               rowCells[i + 1].y + rowCells[i + 1].height
               ? rowCells[i + 1].height
                 ? rowCells[i + 1].y + rowCells[i + 1].height - this.scrollTop
@@ -1608,13 +1645,13 @@ export class Panel {
               : rowCells[i].y -
                   this.scrollTop +
                   rowCells[i].height +
-                  Style.rulerResizeGapWidth
+                  this.style.rulerResizeGapWidth
           )
         ) {
           if (isDblClick) {
             this.resizeRow(
               rowCells[i].position.row,
-              Style.cellHeight - rowCells[i].height
+              this.style.cellHeight - rowCells[i].height
             );
             break;
           } else {
@@ -1635,11 +1672,11 @@ export class Panel {
           this.getScrollXThumbLeft(this.getScrollXThumbHeight())
         )
       ) {
-        this.scrollX((-1 * this.viewColumnCount * Style.cellWidth) / 2);
+        this.scrollX((-1 * this.viewColumnCount * this.style.cellWidth) / 2);
         this.setActive();
         this.drawRuler(this.ctx);
       } else {
-        this.scrollX((this.viewColumnCount * Style.cellWidth) / 2);
+        this.scrollX((this.viewColumnCount * this.style.cellWidth) / 2);
         this.setActive();
         this.drawRuler(this.ctx);
       }
@@ -1654,11 +1691,11 @@ export class Panel {
           this.getScrollYThumbTop(this.getScrollYThumbHeight())
         )
       ) {
-        this.scrollY((-1 * this.viewRowCount * Style.cellHeight) / 2);
+        this.scrollY((-1 * this.viewRowCount * this.style.cellHeight) / 2);
         this.setActive();
         this.drawRuler(this.ctx);
       } else {
-        this.scrollY((this.viewRowCount * Style.cellHeight) / 2);
+        this.scrollY((this.viewRowCount * this.style.cellHeight) / 2);
         this.setActive();
         this.drawRuler(this.ctx);
       }
@@ -1944,7 +1981,9 @@ export class Panel {
     ) {
       if (y > this.offsetTop + this.clientHeight || y < this.offsetTop) {
         this.scrollY(
-          y < this.offsetTop ? -1 * Style.cellHeight : Style.cellHeight
+          y < this.offsetTop
+            ? -1 * this.style.cellHeight
+            : this.style.cellHeight
         );
         const range = this.calcActive(x, y);
         if (range) {
@@ -1955,7 +1994,7 @@ export class Panel {
       }
       if (x > this.offsetLeft + this.clientWidth || x < this.offsetLeft) {
         this.scrollX(
-          x < this.offsetLeft ? -1 * Style.cellWidth : Style.cellWidth
+          x < this.offsetLeft ? -1 * this.style.cellWidth : this.style.cellWidth
         );
         const range = this.calcActive(this.mousePoint.x, this.mousePoint.y);
         if (range) {
@@ -2053,8 +2092,8 @@ export class Panel {
   calcScrollX(x: number, y: number) {
     let scrollXThumbHeight =
       (this.clientWidth / this.scrollWidth) * this.clientWidth;
-    if (scrollXThumbHeight < Style.scrollBarThumbMinSize) {
-      scrollXThumbHeight = Style.scrollBarThumbMinSize;
+    if (scrollXThumbHeight < this.style.scrollBarThumbMinSize) {
+      scrollXThumbHeight = this.style.scrollBarThumbMinSize;
     }
     const deltaX =
       ((x - this.mousePoint.x) * (this.scrollWidth - this.clientWidth)) /
@@ -2065,8 +2104,8 @@ export class Panel {
   calcScrollY(x: number, y: number) {
     let scrollYThumbHeight =
       (this.clientHeight / this.scrollHeight) * this.clientHeight;
-    if (scrollYThumbHeight < Style.scrollBarThumbMinSize) {
-      scrollYThumbHeight = Style.scrollBarThumbMinSize;
+    if (scrollYThumbHeight < this.style.scrollBarThumbMinSize) {
+      scrollYThumbHeight = this.style.scrollBarThumbMinSize;
     }
     const deltaY =
       ((y - this.mousePoint.y) * (this.scrollHeight - this.clientHeight)) /
@@ -2399,28 +2438,28 @@ export class Panel {
           ? this.rows[this.rows.length - 1].y +
             this.rows[this.rows.length - 1].height
           : 0,
-        height: this.rows.length ? Style.cellHeight : this.offsetTop,
+        height: this.rows.length ? this.style.cellHeight : this.offsetTop,
         // fontWeight: {
-        //   value: this.columns[i].style.fontWeight.value || Style.cellFontWeight,
+        //   value: this.columns[i].style.fontWeight.value || this.style.cellFontWeight,
         //   lastModifyTime,
         // },
         // textAlign: {
         //   value:
         //     this.columns[i].style.textAlign.value ||
-        //     (Style.cellTextAlignLeft as CanvasTextAlign),
+        //     (this.style.cellTextAlignLeft as CanvasTextAlign),
         //   lastModifyTime,
         // },
         // textBaseline: {
-        //   value: Style.cellTextBaseline as CanvasTextBaseline,
+        //   value: this.style.cellTextBaseline as CanvasTextBaseline,
         //   lastModifyTime,
         // },
-        // fontStyle: { value: Style.cellFontStyle, lastModifyTime },
-        // fontFamily: { value: Style.cellFontFamily, lastModifyTime },
-        // fontSize: { value: Style.cellFontSize, lastModifyTime },
-        // background: { value: Style.cellBackgroundColor, lastModifyTime },
-        // color: { value: Style.cellColor, lastModifyTime },
-        // borderWidth: { value: Style.cellBorderWidth, lastModifyTime },
-        // borderColor: { value: Style.cellBorderColor, lastModifyTime },
+        // fontStyle: { value: this.style.cellFontStyle, lastModifyTime },
+        // fontFamily: { value: this.style.cellFontFamily, lastModifyTime },
+        // fontSize: { value: this.style.cellFontSize, lastModifyTime },
+        // background: { value: this.style.cellBackgroundColor, lastModifyTime },
+        // color: { value: this.style.cellColor, lastModifyTime },
+        // borderWidth: { value: this.style.cellBorderWidth, lastModifyTime },
+        // borderColor: { value: this.style.cellBorderColor, lastModifyTime },
       });
       this.cells.push(
         Array.from({ length: this.columns.length }).map((cv, ck) =>
@@ -2439,23 +2478,23 @@ export class Panel {
           ? this.columns[columnLength - 1].x +
             this.columns[columnLength - 1].width
           : 0,
-        width: columnLength ? Style.cellWidth : this.offsetLeft,
-        // fontWeight: { value: Style.cellFontWeight, lastModifyTime },
+        width: columnLength ? this.style.cellWidth : this.offsetLeft,
+        // fontWeight: { value: this.style.cellFontWeight, lastModifyTime },
         // textAlign: {
-        //   value: Style.cellTextAlignLeft as CanvasTextAlign,
+        //   value: this.style.cellTextAlignLeft as CanvasTextAlign,
         //   lastModifyTime,
         // },
         // textBaseline: {
-        //   value: Style.cellTextBaseline as CanvasTextBaseline,
+        //   value: this.style.cellTextBaseline as CanvasTextBaseline,
         //   lastModifyTime,
         // },
-        // fontStyle: { value: Style.cellFontStyle, lastModifyTime },
-        // fontFamily: { value: Style.cellFontFamily, lastModifyTime },
-        // fontSize: { value: Style.cellFontSize, lastModifyTime },
-        // background: { value: Style.cellBackgroundColor, lastModifyTime },
-        // color: { value: Style.cellColor, lastModifyTime },
-        // borderWidth: { value: Style.cellBorderWidth, lastModifyTime },
-        // borderColor: { value: Style.cellBorderColor, lastModifyTime },
+        // fontStyle: { value: this.style.cellFontStyle, lastModifyTime },
+        // fontFamily: { value: this.style.cellFontFamily, lastModifyTime },
+        // fontSize: { value: this.style.cellFontSize, lastModifyTime },
+        // background: { value: this.style.cellBackgroundColor, lastModifyTime },
+        // color: { value: this.style.cellColor, lastModifyTime },
+        // borderWidth: { value: this.style.cellBorderWidth, lastModifyTime },
+        // borderColor: { value: this.style.cellBorderColor, lastModifyTime },
       });
       this.cells.forEach((row, rk) =>
         row.push(this.createCell(rk, columnLength))
@@ -2472,14 +2511,14 @@ export class Panel {
       this.createColumn(
         Math.ceil(
           (this.scrollLeft - this.scrollWidth + this.clientWidth) /
-            Style.cellWidth
+            this.style.cellWidth
         ) + 1
       );
       this.scrollWidth =
         this.cells[0][this.cells[0].length - 1].x +
         this.cells[0][this.cells[0].length - 1].width -
         this.offsetLeft;
-      // this.scrollLeft = this.scrollWidth - this.clientWidth - Style.cellWidth;
+      // this.scrollLeft = this.scrollWidth - this.clientWidth - this.style.cellWidth;
     } else if (this.scrollLeft <= 0) {
       this.scrollLeft = 0;
     }
@@ -2499,14 +2538,14 @@ export class Panel {
       this.createRow(
         Math.ceil(
           (this.scrollTop - this.scrollHeight + this.clientHeight) /
-            Style.cellHeight
+            this.style.cellHeight
         ) + 1
       );
       this.scrollHeight =
         this.cells[this.cells.length - 1][0].y +
         this.cells[this.cells.length - 1][0].height -
         this.offsetTop;
-      // this.scrollTop = this.scrollHeight - this.clientHeight - Style.cellHeight;
+      // this.scrollTop = this.scrollHeight - this.clientHeight - this.style.cellHeight;
     } else if (this.scrollTop <= 0) {
       this.scrollTop = 0;
     }
@@ -3041,8 +3080,8 @@ export class Panel {
         : [
             this.cells[this.cells.length - 1][0].y +
               this.cells[this.cells.length - 1][0].height +
-              (i - this.cells.length) * Style.cellHeight,
-            Style.cellHeight,
+              (i - this.cells.length) * this.style.cellHeight,
+            this.style.cellHeight,
           ];
       if (inRange(posY, y, y + height, true)) {
         const cell = this.cells[i][this.activeCellPos.column].isCombined
@@ -3452,7 +3491,6 @@ export class Panel {
     this.state.isCellEdit = false;
     this.canvas.focus();
   }
-
 
   onEditCellKeyDown(event: KeyboardEvent) {
     switch (event.code) {
@@ -4123,7 +4161,7 @@ export class Panel {
       const width = this.floatArr[i].width;
       const height = this.floatArr[i].height;
       const isActive = this.floatArr[i].isActive;
-      const radius = Style.activeFloatElementResizeArcRadius;
+      const radius = this.style.activeFloatElementResizeArcRadius;
       if (
         !inRange(
           x - this.scrollLeft - radius,
@@ -4187,7 +4225,7 @@ export class Panel {
     this.actionCtx.transform(scale, 0, 0, scale, 0, 0);
     this.animationCtx.transform(scale, 0, 0, scale, 0, 0);
     this.floatCtx.transform(scale, 0, 0, scale, 0, 0);
-    // this.offscreenCtx.transform(scale, 0, 0, scale, 0, 0);
+    this.offscreenCtx.transform(scale, 0, 0, scale, 0, 0);
     this.floatActionCtx.transform(scale, 0, 0, scale, 0, 0);
   }
 }

@@ -95,14 +95,18 @@ export class EditorPanelComponent
   }
 
   zoomIn() {
-    this.multiple = this.multiple + 0.2 > 2 ? 2 : this.multiple + 0.2;
-    this.init();
-    this.cdr.detectChanges();
+    if (this.multiple < 1.5) {
+      this.multiple += 0.1;
+      this.init();
+      this.cdr.detectChanges();
+    }
   }
   zoomOut() {
-    this.multiple = this.multiple - 0.2 < 0.2 ? 0.2 : this.multiple - 0.2;
-    this.init();
-    this.cdr.detectChanges();
+    if (this.multiple > 0.5) {
+      this.multiple -= 0.1;
+      this.init();
+      this.cdr.detectChanges();
+    }
   }
 
   onBarInputFocus(event) {
