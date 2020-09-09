@@ -528,7 +528,6 @@ export class Panel {
         cellCtx.save();
       }
       cellCtx.fillRect(x, y, width, height);
-      cellCtx.strokeRect(x + 0.5, y + 0.5, width, height);
       if (columns[i].content.value) {
         cellCtx.fillStyle = columns[0].style.color;
         cellCtx.fillText(
@@ -550,6 +549,7 @@ export class Panel {
           height
         );
       }
+      ctx.strokeRect(x + 0.5, y + 0.5, width, height);
       cellCtx.restore();
     }
     for (let len = rows.length, i = len - 1; i >= 0; i--) {
@@ -600,7 +600,6 @@ export class Panel {
       // }
       cellCtx.fillStyle = rows[i].style.background;
       cellCtx.fillRect(x, y, width, height);
-      cellCtx.strokeRect(x + 0.5, y + 0.5, width, height);
       if (rows[i].content.value) {
         cellCtx.fillStyle = columns[0].style.color;
         cellCtx.fillText(
@@ -623,6 +622,7 @@ export class Panel {
           height
         );
       }
+      ctx.strokeRect(x + 0.5, y + 0.5, width, height);
       cellCtx.restore();
     }
 
