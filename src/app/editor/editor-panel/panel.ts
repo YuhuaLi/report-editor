@@ -519,7 +519,8 @@ export class Panel {
         cellCtx.clearRect(0, 0, this.width, this.height);
         cellCtx.save();
         cellCtx.textAlign = columns[i].style.textAlign as CanvasTextAlign;
-        cellCtx.textBaseline = columns[i].style.textBaseline as CanvasTextBaseline;
+        cellCtx.textBaseline = columns[i].style
+          .textBaseline as CanvasTextBaseline;
         cellCtx.strokeStyle = this.style.rulerCellBorderColor;
         cellCtx.font = ctx.font = `${columns[i].style.fontStyle} ${columns[i].style.fontWeight} ${columns[i].style.fontSize}pt ${columns[i].style.fontFamily}`;
         cellCtx.fillStyle = columns[i].style.background;
@@ -627,8 +628,8 @@ export class Panel {
     }
 
     ctx.fillStyle = this.style.cellBackgroundColor;
-    ctx.fillRect(0, 0, this.offsetLeft, this.offsetTop);
-    ctx.strokeRect(0, 0, this.offsetLeft, this.offsetTop);
+    ctx.fillRect(0.5, 0.5, this.offsetLeft, this.offsetTop);
+    ctx.strokeRect(0.5, 0.5, this.offsetLeft, this.offsetTop);
     ctx.fillStyle = this.style.activeRulerCellBacgroundColor;
     ctx.beginPath();
     ctx.moveTo(
@@ -649,6 +650,18 @@ export class Panel {
     );
     ctx.fill();
     ctx.closePath();
+    ctx.strokeRect(
+      0.5,
+      0.5,
+      columns[columns.length - 1].x + columns[columns.length - 1].width,
+      this.offsetTop
+    );
+    ctx.strokeRect(
+      0.5,
+      0.5,
+      this.offsetLeft,
+      rows[rows.length - 1].x + rows[rows.length - 1].height
+    );
     ctx.restore();
   }
 
