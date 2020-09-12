@@ -173,7 +173,7 @@
       {{ fontSize }}
     </option>
   </select>
-  <input type="file" placeholder="insert image" (change)="insertImage($event)" />
+  <input type="file" placeholder="insert image" (change)="insertImage($event)" accept="image/*" />
 </div>
 <div class="formula-bar">
   <label class="bar-label">{{ (activeCell && activeCell.index) || "" }}</label

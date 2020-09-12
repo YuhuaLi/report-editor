@@ -3,6 +3,8 @@ import { Cell, CellRange, Style, KeyCode, CellStyle } from 'src/app/core/model';
 import { inRange } from 'src/app/core/utils/function';
 import { FloatElement } from 'src/app/core/model/float-element';
 import { element } from 'protractor';
+import { throttle } from 'src/app/core/decorator/throttle.decorator';
+import { LogicPosition } from 'src/app/core/model/logic-position.enmu';
 
 export class Panel {
   multiple = 1;
@@ -48,6 +50,7 @@ export class Panel {
       this.activeCell = this.cells[val.row][val.column].isCombined
         ? this.cells[val.row][val.column].combineCell
         : this.cells[val.row][val.column];
+      this.floatArr.forEach((elem) => (elem.isActive = false));
     } else {
       this.activeCell = null;
     }
@@ -151,7 +154,7 @@ export class Panel {
   }
 
   /** 重绘视图 */
-  refreshView() {
+  refreshView(reCalc = true) {
     let startRowIndex = this.rows
       .slice(1)
       .findIndex(
@@ -189,8 +192,8 @@ export class Panel {
         ]),
     ];
 
-    // if (!this.isTicking) {
-    //   requestAnimationFrame(() => {
+    if (!this.isTicking) {
+      requestAnimationFrame(() => {
         this.ctx.clearRect(0, 0, this.width, this.height);
 
         // const canvas = document.createElement('canvas');
@@ -209,9 +212,9 @@ export class Panel {
 
         this.isTicking = false;
         // this.ctx.drawImage(canvas, 0, 0);
-    //   });
-    // }
-    // this.isTicking = true;
+      });
+    }
+    this.isTicking = true;
   }
 
   /** 创建单元格对象 */
@@ -683,15 +686,21 @@ export class Panel {
   drawFloat() {
     const ctx = this.offscreenCtx;
     ctx.clearRect(0, 0, this.width, this.height);
+    this.floatCtx.clearRect(0, 0, this.width, this.height);
+    const floatArr = this.filterOffscreenFloat(this.floatArr);
+    if (!floatArr.length) {
+      return;
+    }
     ctx.save();
-    for (const elem of this.floatArr) {
+    for (const elem of floatArr) {
       ctx.drawImage(
         elem.content,
         elem.x - this.scrollLeft,
-        elem.y - this.scrollTop
+        elem.y - this.scrollTop,
+        elem.width,
+        elem.height
       );
     }
-    this.floatCtx.clearRect(0, 0, this.width, this.height);
     this.floatCtx.drawImage(
       ctx.canvas,
       this.offsetLeft * this.multiple,
@@ -820,12 +829,13 @@ export class Panel {
       .forEach(
         (row) => (row[0].style.background = this.style.rulerCellBackgroundColor)
       );
-    if (this.floatArr.find((elem) => elem.isActive)) {
+    const floatArr = this.filterOffscreenFloat(this.floatArr);
+    if (floatArr.find((elem) => elem.isActive)) {
       ctx.lineWidth = this.style.activeFloatElementBorderWidth;
       ctx.strokeStyle = this.style.activeFloatElementBorderColor;
       ctx.fillStyle = '#fff';
       const radius = this.style.activeFloatElementResizeArcRadius;
-      for (const elem of this.floatArr) {
+      for (const elem of floatArr) {
         if (elem.isActive) {
           const x = elem.x - this.scrollLeft;
           const y = elem.y - this.scrollTop;
@@ -1565,7 +1575,6 @@ export class Panel {
                 }
                 return acc;
               }, 0);
-            console.log(width);
             if (width) {
               this.resizeColumn(
                 this.viewCells[0][i].position.column,
@@ -1728,6 +1737,20 @@ export class Panel {
       const floatElement = this.getViewFloatElementByPoint(eventX, eventY);
 
       if (floatElement) {
+        const floatElemntResizePos = this.getFloatElementResizePos(
+          floatElement,
+          eventX,
+          eventY
+        );
+        if (
+          floatElemntResizePos !== LogicPosition.Other &&
+          floatElement.isActive
+        ) {
+          this.state.isResizeFloat = true;
+          this.state.resizeFloatPos = floatElemntResizePos;
+        } else {
+          this.state.isMoveFloat = true;
+        }
         if (event.ctrlKey || event.shiftKey) {
           floatElement.isActive = true;
         } else {
@@ -1735,7 +1758,7 @@ export class Panel {
             (elem) => (elem.isActive = floatElement === elem)
           );
         }
-        this.state.isMoveFloat = true;
+
         this.activeCellPos = null;
         this.activeArr = [];
       } else {
@@ -1743,7 +1766,6 @@ export class Panel {
           (elem) => (elem.isActive = floatElement === elem)
         );
         const cell = this.getViewCellByPoint(eventX, eventY);
-        console.log(cell);
         if (!cell) {
           return;
         }
@@ -1877,14 +1899,42 @@ export class Panel {
       } else {
         this.canvas.style.cursor = 'default';
       }
-    } else if (this.getViewFloatElementByPoint(eventX, eventY)) {
+    } else if (this.state.isMoveFloat) {
       this.canvas.style.cursor = 'move';
     } else {
-      this.canvas.style.cursor = 'cell';
+      const floatElement = this.getViewFloatElementByPoint(eventX, eventY);
+      if (floatElement || this.state.isResizeFloat) {
+        const pos =
+          this.state.resizeFloatPos ||
+          this.getFloatElementResizePos(floatElement, eventX, eventY);
+        switch (pos) {
+          case LogicPosition.LeftTop:
+          case LogicPosition.RightBottom:
+            this.canvas.style.cursor = 'nwse-resize';
+            break;
+          case LogicPosition.rightTop:
+          case LogicPosition.LeftBottom:
+            this.canvas.style.cursor = 'nesw-resize';
+            break;
+          case LogicPosition.Top:
+          case LogicPosition.Bottom:
+            this.canvas.style.cursor = 'ns-resize';
+            break;
+          case LogicPosition.Left:
+          case LogicPosition.Right:
+            this.canvas.style.cursor = 'ew-resize';
+            break;
+          default:
+            this.canvas.style.cursor = 'move';
+            break;
+        }
+      } else {
+        this.canvas.style.cursor = 'cell';
+      }
     }
   }
 
-  // @throttle(20)
+  @throttle(20)
   /** 鼠标移动事件 */
   onMouseMove(event: MouseEvent) {
     // console.log('move');
@@ -1910,84 +1960,128 @@ export class Panel {
       this.drawScrollBar(this.ctx);
     }
 
-    if (!this.isTicking) {
-      requestAnimationFrame(() => {
-        if (this.state.isMoveFloat) {
-          const shouldRefreshPoint = this.moveFloat(eventX, eventY);
-          this.mousePoint = {
-            x: (shouldRefreshPoint[0] && eventX) || this.mousePoint.x,
-            y: (shouldRefreshPoint[1] && eventY) || this.mousePoint.y,
-            lastModifyTime: this.mousePoint && this.mousePoint.lastModifyTime,
-          };
-        } else {
-          let range;
-          if (this.state.isSelectCell) {
-            range = this.calcActive(eventX, eventY);
-          } else if (this.state.unSelectCell) {
-            range = this.calcUnActive(eventX, eventY);
-          } else if (this.state.isSelectScrollYThumb) {
-            this.calcScrollY(eventX, eventY);
-          } else if (this.state.isSelectScrollXThumb) {
-            this.calcScrollX(eventX, eventY);
-          } else if (this.state.isSelectRulerX) {
-            range = this.calcAcitiveRulerX(eventX, eventY);
-          } else if (this.state.isSelectRulerY) {
-            range = this.calcActiveRulerY(eventX, eventY);
-          } else if (this.state.unSelectRulerX) {
-            range = this.calcUnActiveRulerX(eventX, eventY);
-          } else if (this.state.unSelectRulerY) {
-            range = this.calcUnActiveRulerY(eventX, eventY);
-          } else if (this.state.isResizeColumn) {
-            this.resizeColumn(
-              this.resizeColumnCell.position.column,
-              eventX - this.mousePoint.x
-            );
-          } else if (this.state.isResizeRow) {
-            this.resizeRow(
-              this.resizeRowCell.position.row,
-              eventY - this.mousePoint.y
-            );
-          }
-          if (range) {
-            if (
-              !this.state.unSelectCell &&
-              !this.state.unSelectRulerX &&
-              !this.state.unSelectRulerY
-            ) {
-              this.activeArr.push(range);
-              this.activeArr.splice(this.activeArr.length - 2, 1);
-            } else if (range) {
-              this.unActiveRange = range;
-            }
-            this.setActive();
-            this.drawRuler(this.ctx);
-          }
-          this.mousePoint = {
-            x: eventX,
-            y: eventY,
-            lastModifyTime: this.mousePoint && this.mousePoint.lastModifyTime,
-          };
+    // if (!this.isTicking) {
+    //   requestAnimationFrame(() => {
+    if (this.state.isMoveFloat) {
+      this.moveFloat(eventX, eventY);
+    } else if (this.state.isResizeFloat) {
+      this.resizeFloat(eventX, eventY);
+    } else {
+      let range;
+      if (this.state.isSelectCell) {
+        range = this.calcActive(eventX, eventY);
+      } else if (this.state.unSelectCell) {
+        range = this.calcUnActive(eventX, eventY);
+      } else if (this.state.isSelectScrollYThumb) {
+        this.calcScrollY(eventX, eventY);
+      } else if (this.state.isSelectScrollXThumb) {
+        this.calcScrollX(eventX, eventY);
+      } else if (this.state.isSelectRulerX) {
+        range = this.calcAcitiveRulerX(eventX, eventY);
+      } else if (this.state.isSelectRulerY) {
+        range = this.calcActiveRulerY(eventX, eventY);
+      } else if (this.state.unSelectRulerX) {
+        range = this.calcUnActiveRulerX(eventX, eventY);
+      } else if (this.state.unSelectRulerY) {
+        range = this.calcUnActiveRulerY(eventX, eventY);
+      } else if (this.state.isResizeColumn) {
+        this.resizeColumn(
+          this.resizeColumnCell.position.column,
+          eventX - this.mousePoint.x
+        );
+      } else if (this.state.isResizeRow) {
+        this.resizeRow(
+          this.resizeRowCell.position.row,
+          eventY - this.mousePoint.y
+        );
+      }
+      if (range) {
+        if (
+          !this.state.unSelectCell &&
+          !this.state.unSelectRulerX &&
+          !this.state.unSelectRulerY
+        ) {
+          this.activeArr.push(range);
+          this.activeArr.splice(this.activeArr.length - 2, 1);
+        } else if (range) {
+          this.unActiveRange = range;
         }
-        this.isTicking = false;
-      });
+        this.setActive();
+        this.drawRuler(this.ctx);
+      }
     }
+    this.mousePoint = {
+      x: eventX,
+      y: eventY,
+      lastModifyTime: this.mousePoint && this.mousePoint.lastModifyTime,
+    };
+    //   this.isTicking = false;
+    // });
+    // }
 
-    this.isTicking = true;
+    // this.isTicking = true;
   }
 
-  moveFloat(eventX, eventY) {
-    const floatElem = this.floatArr.find((elem) => elem.isActive);
-    floatElem.x += eventX - this.mousePoint.x;
-    floatElem.y += eventY - this.mousePoint.y;
-    const shouldRefreshPoint = [
-      floatElem.x > this.offsetLeft,
-      floatElem.y > this.offsetTop,
-    ];
-    floatElem.x = floatElem.x < this.offsetLeft ? this.offsetLeft : floatElem.x;
-    floatElem.y = floatElem.y < this.offsetTop ? this.offsetTop : floatElem.y;
+  resizeFloat(eventX, eventY) {
+    const activeArr = this.floatArr.filter((elem) => elem.isActive);
+    for (const floatElem of activeArr) {
+      switch (this.state.resizeFloatPos) {
+        case LogicPosition.LeftTop:
+          floatElem.x = eventX + this.scrollLeft;
+          floatElem.y = eventY + this.scrollTop;
+          floatElem.width -= eventX - this.mousePoint.x;
+          floatElem.height -= eventY - this.mousePoint.y;
+          break;
+        case LogicPosition.LeftBottom:
+          floatElem.x = eventX + this.scrollLeft;
+          floatElem.width -= eventX - this.mousePoint.x;
+          floatElem.height += eventY - this.mousePoint.y;
+          break;
+        case LogicPosition.Left:
+          floatElem.x = eventX + this.scrollLeft;
+          floatElem.width -= eventX - this.mousePoint.x;
+          break;
+        case LogicPosition.Right:
+          floatElem.width += eventX - this.mousePoint.x;
+          break;
+        case LogicPosition.Top:
+          floatElem.y = eventY + this.scrollTop;
+          floatElem.height -= eventY - this.mousePoint.y;
+          break;
+        case LogicPosition.Bottom:
+          floatElem.height += eventY - this.mousePoint.y;
+          break;
+        case LogicPosition.rightTop:
+          floatElem.y = eventY + this.scrollTop;
+          floatElem.width += eventX - this.mousePoint.x;
+          floatElem.height -= eventY - this.mousePoint.y;
+          break;
+        case LogicPosition.RightBottom:
+          floatElem.width += eventX - this.mousePoint.x;
+          floatElem.height += eventY - this.mousePoint.y;
+          break;
+      }
+      floatElem.x =
+        floatElem.x < this.offsetLeft ? this.offsetLeft : floatElem.x;
+      floatElem.y = floatElem.y < this.offsetTop ? this.offsetTop : floatElem.y;
+      floatElem.width = floatElem.width < 0 ? 0 : floatElem.width;
+      floatElem.height = floatElem.height < 0 ? 0 : floatElem.height;
+    }
     this.refreshView();
-    console.log(this.mousePoint, [eventX, eventY], shouldRefreshPoint);
-    return shouldRefreshPoint;
+  }
+
+  /** 移动悬浮元素（图片） */
+  moveFloat(eventX, eventY) {
+    const activeArr = this.floatArr.filter((elem) => elem.isActive);
+    for (const floatElem of activeArr) {
+      floatElem.x += eventX - this.mousePoint.x;
+      floatElem.y += eventY - this.mousePoint.y;
+
+      floatElem.x =
+        floatElem.x < this.offsetLeft ? this.offsetLeft : floatElem.x;
+      floatElem.y = floatElem.y < this.offsetTop ? this.offsetTop : floatElem.y;
+    }
+    this.refreshView();
   }
 
   /** 重新设置列宽度 */
@@ -2461,6 +2555,8 @@ export class Panel {
     this.state.isMoveFloat = false;
     this.resizeColumnCell = null;
     this.resizeRowCell = null;
+    this.state.isResizeFloat = null;
+    this.state.resizeFloatPos = null;
     // this.mousePoint = null;
     if (
       this.state.unSelectCell ||
@@ -2606,14 +2702,14 @@ export class Panel {
 
   onWheel(event: WheelEvent) {
     // console.log('wheel', event);
-    if (!this.isTicking) {
-      requestAnimationFrame(() => {
-        this.scrollY(event.deltaY);
+    // if (!this.isTicking) {
+    //   requestAnimationFrame(() => {
+    this.scrollY(event.deltaY);
 
-        this.isTicking = false;
-      });
-    }
-    this.isTicking = true;
+    //     this.isTicking = false;
+    //   });
+    // }
+    // this.isTicking = true;
   }
 
   onKeyArrowUpOrDown(event: KeyboardEvent) {
@@ -2652,15 +2748,15 @@ export class Panel {
             this.activeCell.position.column + this.activeCell.colSpan - 1,
         },
       ];
-      if (!this.isTicking) {
-        requestAnimationFrame(() => {
-          this.resetCellPerspective(
-            this.cells[this.activeCellPos.row][this.activeCellPos.column]
-          );
+      // if (!this.isTicking) {
+      //   requestAnimationFrame(() => {
+      this.resetCellPerspective(
+        this.cells[this.activeCellPos.row][this.activeCellPos.column]
+      );
 
-          this.isTicking = false;
-        });
-      }
+      //     this.isTicking = false;
+      //   });
+      // }
     } else {
       const range = this.activeArr[this.activeCellPos.rangeIndex];
       if (range && range.rowEnd !== Infinity) {
@@ -2685,18 +2781,18 @@ export class Panel {
             range.rowEnd - 1 < 1 || event.ctrlKey ? 1 : range.rowEnd - 1;
           this.recalcRange(range, isExpand);
         }
-        if (!this.isTicking) {
-          requestAnimationFrame(() => {
-            this.resetCellPerspective(
-              this.cells[range.rowEnd][
-                range.columnEnd === Infinity ? 0 : range.columnEnd
-              ]
-            );
+        // if (!this.isTicking) {
+        //   requestAnimationFrame(() => {
+        this.resetCellPerspective(
+          this.cells[range.rowEnd][
+            range.columnEnd === Infinity ? 0 : range.columnEnd
+          ]
+        );
 
-            this.isTicking = false;
-          });
-        }
-        this.isTicking = true;
+        //       this.isTicking = false;
+        //     });
+        //   }
+        //   this.isTicking = true;
       }
     }
   }
@@ -2738,14 +2834,14 @@ export class Panel {
             this.activeCell.position.column + this.activeCell.colSpan - 1,
         },
       ];
-      if (!this.isTicking) {
-        requestAnimationFrame(() => {
-          this.resetCellPerspective(
-            this.cells[this.activeCellPos.row][this.activeCellPos.column]
-          );
-          this.isTicking = false;
-        });
-      }
+      // if (!this.isTicking) {
+      //   requestAnimationFrame(() => {
+      this.resetCellPerspective(
+        this.cells[this.activeCellPos.row][this.activeCellPos.column]
+      );
+      //   this.isTicking = false;
+      // });
+      // }
     } else {
       const range = this.activeArr[this.activeCellPos.rangeIndex];
       if (range && range.columnEnd !== Infinity) {
@@ -2770,19 +2866,19 @@ export class Panel {
             range.columnEnd - 1 < 1 || event.ctrlKey ? 1 : range.columnEnd - 1;
           this.recalcRange(range, isExpand);
         }
-        if (!this.isTicking) {
-          requestAnimationFrame(() => {
-            this.resetCellPerspective(
-              this.cells[range.rowEnd === Infinity ? 0 : range.rowEnd][
-                event.code === KeyCode.ArrowRight
-                  ? Math.max(range.columnStart, range.columnEnd)
-                  : Math.min(range.columnStart, range.columnEnd)
-              ]
-            );
-            this.isTicking = false;
-          });
-        }
-        this.isTicking = true;
+        // if (!this.isTicking) {
+        //   requestAnimationFrame(() => {
+        this.resetCellPerspective(
+          this.cells[range.rowEnd === Infinity ? 0 : range.rowEnd][
+            event.code === KeyCode.ArrowRight
+              ? Math.max(range.columnStart, range.columnEnd)
+              : Math.min(range.columnStart, range.columnEnd)
+          ]
+        );
+        //     this.isTicking = false;
+        //   });
+        // }
+        // this.isTicking = true;
       }
     }
   }
@@ -2863,14 +2959,14 @@ export class Panel {
             this.activeCell.position.column + this.activeCell.colSpan - 1,
         },
       ];
-      if (!this.isTicking) {
-        requestAnimationFrame(() => {
-          this.resetCellPerspective(
-            this.cells[this.activeCellPos.row][this.activeCellPos.column]
-          );
-          this.isTicking = false;
-        });
-      }
+      // if (!this.isTicking) {
+      //   requestAnimationFrame(() => {
+      this.resetCellPerspective(
+        this.cells[this.activeCellPos.row][this.activeCellPos.column]
+      );
+      //     this.isTicking = false;
+      //   });
+      // }
     } else {
       let { row, column, rangeIndex } = this.activeCellPos;
       let next = false;
@@ -3030,14 +3126,14 @@ export class Panel {
         }
       }
 
-      if (!this.isTicking) {
-        requestAnimationFrame(() => {
-          this.resetCellPerspective(
-            this.cells[this.activeCellPos.row][this.activeCellPos.column]
-          );
-          this.isTicking = false;
-        });
-      }
+      // if (!this.isTicking) {
+      //   requestAnimationFrame(() => {
+      this.resetCellPerspective(
+        this.cells[this.activeCellPos.row][this.activeCellPos.column]
+      );
+      //     this.isTicking = false;
+      //   });
+      // }
     }
   }
 
@@ -3161,27 +3257,27 @@ export class Panel {
           column: this.activeCellPos.column,
           rangeIndex: 0,
         };
-        if (!this.isTicking) {
-          requestAnimationFrame(() => {
-            this.resetCellPerspective(
-              event.shiftKey
-                ? this.cells[
-                    event.code === KeyCode.PageDown
-                      ? Math.max(
-                          this.activeArr[0].rowStart,
-                          this.activeArr[0].rowEnd
-                        )
-                      : Math.min(
-                          this.activeArr[0].rowStart,
-                          this.activeArr[0].rowEnd
-                        )
-                  ][this.activeArr[0].columnEnd]
-                : this.cells[this.activeCellPos.row][this.activeCellPos.column]
-            );
-            this.isTicking = false;
-          });
-        }
-        this.isTicking = true;
+        // if (!this.isTicking) {
+        //   requestAnimationFrame(() => {
+        this.resetCellPerspective(
+          event.shiftKey
+            ? this.cells[
+                event.code === KeyCode.PageDown
+                  ? Math.max(
+                      this.activeArr[0].rowStart,
+                      this.activeArr[0].rowEnd
+                    )
+                  : Math.min(
+                      this.activeArr[0].rowStart,
+                      this.activeArr[0].rowEnd
+                    )
+              ][this.activeArr[0].columnEnd]
+            : this.cells[this.activeCellPos.row][this.activeCellPos.column]
+        );
+        //     this.isTicking = false;
+        //   });
+        // }
+        // this.isTicking = true;
         break;
       } else {
         event.code === KeyCode.PageDown ? i++ : i--;
@@ -3251,7 +3347,17 @@ export class Panel {
         this.onKeyPageUpOrDown(event);
         break;
       case KeyCode.Delete:
-        this.deleteContent(this.activeArr);
+        if (this.floatArr.find((elem) => elem.isActive)) {
+          for (let i = this.floatArr.length - 1; i >= 0; i--) {
+            if (this.floatArr[i].isActive) {
+              this.floatArr.splice(i, 1);
+            }
+          }
+          this.drawFloat();
+          this.setActive();
+        } else {
+          this.deleteContent(this.activeArr);
+        }
         break;
       case KeyCode.Backspace:
         this.resetCellPerspective(
@@ -3718,11 +3824,6 @@ export class Panel {
         if (cell.hidden || (cell.rowSpan === 1 && cell.colSpan === 1)) {
           continue;
         }
-        const [isActiveCellRow, isActiveCellColumn] = [
-          cell.position.row === this.activeCellPos.row,
-
-          cell.position.column === this.activeCellPos.column,
-        ];
         if (cell.position.row < rStart) {
           if (isExpand) {
             rowReverse
@@ -4275,5 +4376,117 @@ export class Panel {
     this.floatCtx.transform(scale, 0, 0, scale, 0, 0);
     this.offscreenCtx.transform(scale, 0, 0, scale, 0, 0);
     this.floatActionCtx.transform(scale, 0, 0, scale, 0, 0);
+  }
+
+  filterOffscreenFloat(floatArr) {
+    return floatArr.filter((elem) => {
+      const x = elem.x;
+      const y = elem.y;
+      const width = elem.width;
+      const height = elem.height;
+
+      const radius = this.style.activeFloatElementResizeArcRadius;
+      return !(
+        !inRange(
+          x - this.scrollLeft - radius,
+          this.offsetLeft,
+          this.offsetLeft + this.clientWidth
+        ) &&
+        !inRange(
+          x + width - this.scrollLeft + radius,
+          this.offsetLeft,
+          this.offsetLeft + this.clientWidth
+        ) &&
+        !inRange(
+          y - this.scrollTop - radius,
+          this.offsetTop,
+          this.offsetTop + this.clientHeight
+        ) &&
+        !inRange(
+          y + height - this.scrollTop + radius,
+          this.offsetTop,
+          this.offsetTop + this.clientHeight
+        )
+      );
+    });
+  }
+
+  getFloatElementResizePos(elem: FloatElement, pointX: number, pointY: number) {
+    const radius = this.style.activeFloatElementResizeArcRadius;
+    const x = elem.x;
+    const y = elem.y;
+    const width = elem.width;
+    const height = elem.height;
+    let pos = LogicPosition.Other;
+    if (
+      inRange(
+        pointX + this.scrollLeft,
+        x + width - radius,
+        x + width + radius
+      ) &&
+      inRange(pointY + this.scrollTop, y + height - radius, y + height + radius)
+    ) {
+      pos = LogicPosition.RightBottom;
+    } else if (
+      inRange(pointX + this.scrollLeft, x - radius, x + radius) &&
+      inRange(pointY + this.scrollTop, y - radius, y + radius)
+    ) {
+      pos = LogicPosition.LeftTop;
+    } else if (
+      inRange(
+        pointX + this.scrollLeft,
+        x + width / 2 - radius,
+        x + width / 2 + radius
+      ) &&
+      inRange(pointY + this.scrollTop, y - radius, y + radius)
+    ) {
+      pos = LogicPosition.Top;
+    } else if (
+      inRange(
+        pointX + this.scrollLeft,
+        x + width - radius,
+        x + width + radius
+      ) &&
+      inRange(pointY + this.scrollTop, y - radius, y + radius)
+    ) {
+      pos = LogicPosition.rightTop;
+    } else if (
+      inRange(pointX + this.scrollLeft, x - radius, x + radius) &&
+      inRange(
+        pointY + this.scrollTop,
+        y + height / 2 - radius,
+        y + height / 2 + radius
+      )
+    ) {
+      pos = LogicPosition.Left;
+    } else if (
+      inRange(
+        pointX + this.scrollLeft,
+        x + width - radius,
+        x + width + radius
+      ) &&
+      inRange(
+        pointY + this.scrollTop,
+        y + height / 2 - radius,
+        y + height / 2 + radius
+      )
+    ) {
+      pos = LogicPosition.Right;
+    } else if (
+      inRange(pointX + this.scrollLeft, x - radius, x + radius) &&
+      inRange(pointY + this.scrollTop, y + height - radius, y + height + radius)
+    ) {
+      pos = LogicPosition.LeftBottom;
+    } else if (
+      inRange(
+        pointX + this.scrollLeft,
+        x + width / 2 - radius,
+        x + width / 2 + radius
+      ) &&
+      inRange(pointY + this.scrollTop, y + height - radius, y + height + radius)
+    ) {
+      pos = LogicPosition.Bottom;
+    }
+    return pos;
   }
 }
