@@ -1,4 +1,4 @@
-export enum KeyCode {
+export enum KeyboardCode {
   Tab = 'Tab',
   Enter = 'Enter',
   PageUp = 'PageUp',
