@@ -3637,7 +3637,7 @@ export class Panel {
   editCellCompelte(change = true) {
     if (!change) {
       this.editingCell.content.value = this.editingCell.content.previousValue;
-    } else {
+    } else if(this.editingCell) {
       this.editingCell.content.previousValue = this.editingCell.content.value;
       this.drawCell(this.ctx, this.editingCell, true);
       this.drawRuler(this.ctx);
