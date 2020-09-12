@@ -1936,10 +1936,10 @@ export class Panel {
 
   @throttle(20)
   /** 鼠标移动事件 */
-  onMouseMove(event: MouseEvent) {
+  onMouseMove(event: any) {
     // console.log('move');
-    const eventX = event.offsetX / this.multiple;
-    const eventY = event.offsetY / this.multiple;
+    const eventX = (event.offsetX || event.layerX || 0) / this.multiple; // 兼容火狐读offetX，offsetY一直为0问题
+    const eventY = (event.offsetY || event.layerY || 0) / this.multiple;
     this.setMouseCursor(eventX, eventY);
     const preIsScrollXThumbHover = this.state.isScrollXThumbHover;
     const preIsScrollYThumbHover = this.state.isScrollYThumbHover;
