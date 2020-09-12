@@ -157,12 +157,29 @@
   <a (click)="zoomIn()"><i class="iconfont icon-fangda"></i></a>
   <!-- <button (click)="zoomOut()">zoomOut</button> -->
   <a (click)="zoomOut()"><i class="iconfont icon-suoxiao"></i></a>
+  <select
+    (change)="changeCellStyle({ fontFamily: $event.target.value })"
+    [value]="activeCell?.style.fontFamily"
+  >
+    <option *ngFor="let fontFamily of fontFamilyArr" [value]="fontFamily">
+      {{ fontFamily }}
+    </option>
+  </select>
+  <select
+    (change)="changeCellStyle({ fontSize: $event.target.value })"
+    [value]="activeCell?.style.fontSize"
+  >
+    <option *ngFor="let fontSize of fontSizeArr" [value]="fontSize">
+      {{ fontSize }}
+    </option>
+  </select>
+  <input type="file" placeholder="insert image" (change)="insertImage($event)" />
 </div>
 <div class="formula-bar">
   <label class="bar-label">{{ (activeCell && activeCell.index) || "" }}</label
   ><input
     [(ngModel)]="activeCell?.content.value"
-    (focus)="onBarInputFocus($event)"
+    (click)="onBarInputFocus($event)"
   />
 </div>
 <div class="panel panel-wrapper">
@@ -205,7 +222,7 @@
           class="editCell"
           autocomplete="off"
           [ngStyle]="{
-            'background': editingCell?.style.background,
+            background: editingCell?.style.background,
             'font-family': editingCell?.style.fontFamily,
             'font-size.pt': editingCell?.style.fontSize * multiple,
             'padding.px': editingCell?.style.borderWidth * multiple,

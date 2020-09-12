@@ -189,23 +189,29 @@ export class Panel {
         ]),
     ];
 
-    this.ctx.clearRect(0, 0, this.width, this.height);
+    // if (!this.isTicking) {
+    //   requestAnimationFrame(() => {
+        this.ctx.clearRect(0, 0, this.width, this.height);
 
-    // const canvas = document.createElement('canvas');
-    // canvas.width = this.width;
-    // canvas.height = this.height;
-    // const ctx = canvas.getContext('2d');
-    this.setActive();
-    this.setClipStatusAnimation();
-    this.drawFloat();
-    // this.drawPanel(ctx);
-    // this.drawRuler(ctx);
-    // this.drawScrollBar(ctx);
-    this.drawPanel(this.ctx);
-    this.drawRuler(this.ctx);
-    this.drawScrollBar(this.ctx);
+        // const canvas = document.createElement('canvas');
+        // canvas.width = this.width;
+        // canvas.height = this.height;
+        // const ctx = canvas.getContext('2d');
+        this.setActive();
+        this.setClipStatusAnimation();
+        this.drawFloat();
+        // this.drawPanel(ctx);
+        // this.drawRuler(ctx);
+        // this.drawScrollBar(ctx);
+        this.drawPanel(this.ctx);
+        this.drawRuler(this.ctx);
+        this.drawScrollBar(this.ctx);
 
-    // this.ctx.drawImage(canvas, 0, 0);
+        this.isTicking = false;
+        // this.ctx.drawImage(canvas, 0, 0);
+    //   });
+    // }
+    // this.isTicking = true;
   }
 
   /** 创建单元格对象 */
@@ -1729,6 +1735,7 @@ export class Panel {
             (elem) => (elem.isActive = floatElement === elem)
           );
         }
+        this.state.isMoveFloat = true;
         this.activeCellPos = null;
         this.activeArr = [];
       } else {
@@ -1844,12 +1851,8 @@ export class Panel {
     }
   }
 
-  // @throttle(20)
-  /** 鼠标移动事件 */
-  onMouseMove(event: MouseEvent) {
-    // console.log('move');
-    const eventX = event.offsetX / this.multiple;
-    const eventY = event.offsetY / this.multiple;
+  // 设置鼠标cursor样式
+  setMouseCursor(eventX, eventY) {
     if (
       (!this.inCellsArea(eventX, eventY) && !this.state.isSelectCell) ||
       this.state.isSelectScrollYThumb ||
@@ -1879,6 +1882,15 @@ export class Panel {
     } else {
       this.canvas.style.cursor = 'cell';
     }
+  }
+
+  // @throttle(20)
+  /** 鼠标移动事件 */
+  onMouseMove(event: MouseEvent) {
+    // console.log('move');
+    const eventX = event.offsetX / this.multiple;
+    const eventY = event.offsetY / this.multiple;
+    this.setMouseCursor(eventX, eventY);
     const preIsScrollXThumbHover = this.state.isScrollXThumbHover;
     const preIsScrollYThumbHover = this.state.isScrollYThumbHover;
     this.state.isScrollXThumbHover = this.inThumbAreaOfScrollBarX(
@@ -1900,58 +1912,82 @@ export class Panel {
 
     if (!this.isTicking) {
       requestAnimationFrame(() => {
-        let range;
-        if (this.state.isSelectCell) {
-          range = this.calcActive(eventX, eventY);
-        } else if (this.state.unSelectCell) {
-          range = this.calcUnActive(eventX, eventY);
-        } else if (this.state.isSelectScrollYThumb) {
-          this.calcScrollY(eventX, eventY);
-        } else if (this.state.isSelectScrollXThumb) {
-          this.calcScrollX(eventX, eventY);
-        } else if (this.state.isSelectRulerX) {
-          range = this.calcAcitiveRulerX(eventX, eventY);
-        } else if (this.state.isSelectRulerY) {
-          range = this.calcActiveRulerY(eventX, eventY);
-        } else if (this.state.unSelectRulerX) {
-          range = this.calcUnActiveRulerX(eventX, eventY);
-        } else if (this.state.unSelectRulerY) {
-          range = this.calcUnActiveRulerY(eventX, eventY);
-        } else if (this.state.isResizeColumn) {
-          this.resizeColumn(
-            this.resizeColumnCell.position.column,
-            eventX - this.mousePoint.x
-          );
-        } else if (this.state.isResizeRow) {
-          this.resizeRow(
-            this.resizeRowCell.position.row,
-            eventY - this.mousePoint.y
-          );
-        }
-        if (range) {
-          if (
-            !this.state.unSelectCell &&
-            !this.state.unSelectRulerX &&
-            !this.state.unSelectRulerY
-          ) {
-            this.activeArr.push(range);
-            this.activeArr.splice(this.activeArr.length - 2, 1);
-          } else if (range) {
-            this.unActiveRange = range;
+        if (this.state.isMoveFloat) {
+          const shouldRefreshPoint = this.moveFloat(eventX, eventY);
+          this.mousePoint = {
+            x: (shouldRefreshPoint[0] && eventX) || this.mousePoint.x,
+            y: (shouldRefreshPoint[1] && eventY) || this.mousePoint.y,
+            lastModifyTime: this.mousePoint && this.mousePoint.lastModifyTime,
+          };
+        } else {
+          let range;
+          if (this.state.isSelectCell) {
+            range = this.calcActive(eventX, eventY);
+          } else if (this.state.unSelectCell) {
+            range = this.calcUnActive(eventX, eventY);
+          } else if (this.state.isSelectScrollYThumb) {
+            this.calcScrollY(eventX, eventY);
+          } else if (this.state.isSelectScrollXThumb) {
+            this.calcScrollX(eventX, eventY);
+          } else if (this.state.isSelectRulerX) {
+            range = this.calcAcitiveRulerX(eventX, eventY);
+          } else if (this.state.isSelectRulerY) {
+            range = this.calcActiveRulerY(eventX, eventY);
+          } else if (this.state.unSelectRulerX) {
+            range = this.calcUnActiveRulerX(eventX, eventY);
+          } else if (this.state.unSelectRulerY) {
+            range = this.calcUnActiveRulerY(eventX, eventY);
+          } else if (this.state.isResizeColumn) {
+            this.resizeColumn(
+              this.resizeColumnCell.position.column,
+              eventX - this.mousePoint.x
+            );
+          } else if (this.state.isResizeRow) {
+            this.resizeRow(
+              this.resizeRowCell.position.row,
+              eventY - this.mousePoint.y
+            );
           }
-          this.setActive();
-          this.drawRuler(this.ctx);
+          if (range) {
+            if (
+              !this.state.unSelectCell &&
+              !this.state.unSelectRulerX &&
+              !this.state.unSelectRulerY
+            ) {
+              this.activeArr.push(range);
+              this.activeArr.splice(this.activeArr.length - 2, 1);
+            } else if (range) {
+              this.unActiveRange = range;
+            }
+            this.setActive();
+            this.drawRuler(this.ctx);
+          }
+          this.mousePoint = {
+            x: eventX,
+            y: eventY,
+            lastModifyTime: this.mousePoint && this.mousePoint.lastModifyTime,
+          };
         }
-        this.mousePoint = {
-          x: eventX,
-          y: eventY,
-          lastModifyTime: this.mousePoint && this.mousePoint.lastModifyTime,
-        };
         this.isTicking = false;
       });
     }
 
     this.isTicking = true;
+  }
+
+  moveFloat(eventX, eventY) {
+    const floatElem = this.floatArr.find((elem) => elem.isActive);
+    floatElem.x += eventX - this.mousePoint.x;
+    floatElem.y += eventY - this.mousePoint.y;
+    const shouldRefreshPoint = [
+      floatElem.x > this.offsetLeft,
+      floatElem.y > this.offsetTop,
+    ];
+    floatElem.x = floatElem.x < this.offsetLeft ? this.offsetLeft : floatElem.x;
+    floatElem.y = floatElem.y < this.offsetTop ? this.offsetTop : floatElem.y;
+    this.refreshView();
+    console.log(this.mousePoint, [eventX, eventY], shouldRefreshPoint);
+    return shouldRefreshPoint;
   }
 
   /** 重新设置列宽度 */
@@ -2422,6 +2458,7 @@ export class Panel {
     this.state.isSelectRulerY = false;
     this.state.isResizeColumn = false;
     this.state.isResizeRow = false;
+    this.state.isMoveFloat = false;
     this.resizeColumnCell = null;
     this.resizeRowCell = null;
     // this.mousePoint = null;
@@ -4088,35 +4125,33 @@ export class Panel {
       for (const item of event.clipboardData.items) {
         if (item.kind === 'file' && /image\/\w*/.test(item.type)) {
           createImageBitmap(item.getAsFile()).then((img) => {
-            const x =
-              this.floatArr.length && !this.activeCell
-                ? this.floatArr[this.floatArr.length - 1].x + this.offsetLeft
-                : this.activeCell.x + this.activeCell.width / 2;
-            const y =
-              this.floatArr.length && !this.activeCell
-                ? this.floatArr[this.floatArr.length - 1].y + this.offsetTop
-                : this.activeCell.y + this.activeCell.height / 2;
-            const floatElement = new FloatElement(
-              x,
-              y,
-              img.width,
-              img.height,
-              img
-            );
-            this.floatArr.forEach((elem) => (elem.isActive = false));
-            this.floatArr.push(floatElement);
-            // this.floatCtx.drawImage(img, floatElement.x, floatElement.y);
-            this.drawFloat();
-            this.activeArr = [];
-            floatElement.isActive = true;
-            this.resetCellPerspective(this.activeCell);
-            this.activeCellPos = null;
+            this.addImage(img);
           });
           return;
         }
       }
     }
   };
+
+  addImage(img) {
+    const x =
+      this.floatArr.length && !this.activeCell
+        ? this.floatArr[this.floatArr.length - 1].x + this.offsetLeft
+        : this.activeCell.x + this.activeCell.width / 2;
+    const y =
+      this.floatArr.length && !this.activeCell
+        ? this.floatArr[this.floatArr.length - 1].y + this.offsetTop
+        : this.activeCell.y + this.activeCell.height / 2;
+    const floatElement = new FloatElement(x, y, img.width, img.height, img);
+    this.floatArr.forEach((elem) => (elem.isActive = false));
+    this.floatArr.push(floatElement);
+    // this.floatCtx.drawImage(img, floatElement.x, floatElement.y);
+    this.drawFloat();
+    this.activeArr = [];
+    floatElement.isActive = true;
+    this.resetCellPerspective(this.activeCell);
+    this.activeCellPos = null;
+  }
 
   toggleItalic() {}
 

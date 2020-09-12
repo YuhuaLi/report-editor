@@ -25,48 +25,17 @@ export class EditorPanelComponent
   @ViewChild('floatPanel') floatPanel: ElementRef;
   @ViewChild('floatActionPanel') floatActionPanel: ElementRef;
   zoomSize: number;
-  // width = 0;
-  // height = 0;
-  // viewRowCount = 0;
-  // viewColumnCount = 0;
-  // offsetLeft = 0;
-  // offsetTop = 30;
-  // columns = [];
-  // rows = [];
-  // cells: Cell[][] = [];
-  // viewCells: Cell[][] = [];
-  // editingCell: Cell;
-  // scrollBarWidth = Style.scrollBarWidth;
-  // // activeRange: {
-  // //   rowStart: number;
-  // //   columnStart: number;
-  // //   rowEnd: number;
-  // //   columnEnd: number;
-  // // } = { rowStart: 1, columnStart: 1, rowEnd: 1, columnEnd: 1 };
-  // state: any = {
-  //   isSelectCell: false,
-  //   isScrollYThumbHover: false,
-  //   isSelectScrollYThumb: false,
-  // };
-  // isTicking = false;
-  // scrollLeft = 0;
-  // scrollTop = 0;
-  // scrollWidth = 0;
-  // scrollHeight = 0;
-  // clientWidth = 0;
-  // clientHeight = 0;
-  // mousePoint: any;
-  // autoScrollTimeoutID: any;
-  // activeCellPos: any = { row: 1, column: 1, rangeIndex: 0 };
-  // activeArr: CellRange[] = [
-  //   { rowStart: 1, columnStart: 1, rowEnd: 1, columnEnd: 1 },
-  // ];
-  // unActiveRange: CellRange;
-  // resizeColumnCell: Cell;
-  // resizeRowCell: Cell;
 
-  // ctx: CanvasRenderingContext2D;
-  // actionCtx: CanvasRenderingContext2D;
+  fontFamilyArr = [
+    'sans-serif',
+    'Arial',
+    'SimSun',
+    'SimHei',
+    'Microsoft YaHei',
+    'KaiTi',
+    'Microsoft JhengHei',
+  ];
+  fontSizeArr = Array.from({ length: 30 }).map((val, idx) => idx + 10);
 
   showFontColorPanel = false;
   showBackColorPanel = false;
@@ -111,8 +80,10 @@ export class EditorPanelComponent
 
   onBarInputFocus(event) {
     event.preventDefault();
-    this.editingCell = this.activeCell;
-    this.editingCell.content.previousValue = this.editingCell.content.value;
+    if (!this.editingCell) {
+      this.editingCell = this.activeCell;
+      this.editingCell.content.previousValue = this.editingCell.content.value;
+    }
   }
 
   toggleFontColorPanel() {
@@ -126,6 +97,15 @@ export class EditorPanelComponent
       this.changeCellStyle({ color: event.target.style.backgroundColor });
     } else if (this.showBackColorPanel) {
       this.changeCellStyle({ background: event.target.style.backgroundColor });
+    }
+  }
+
+  insertImage(event) {
+    console.log(event);
+    if (/image\/\w*/.test(event.target.files[0].type)) {
+      createImageBitmap(event.target.files[0]).then((img) => {
+        this.addImage(img);
+      });
     }
   }
 }
