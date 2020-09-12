@@ -10,14 +10,15 @@
 设置单元格样式  
 合并单元格  
 拖拽调整行列宽高  
-常用按键事件（Ctrl+a,Ctrl+c,Ctrl+v,PageUp,PageDown,Del,Home,Tab,Enter,Shift+Enter,Shift+Tab,Esc)  
+常用按键事件（Ctrl+a,Ctrl+c,Ctrl+v,PageUp,PageDown,Del,Home,Tab,Enter,Shift+Enter,Shift+Tab,Esc,Top/Left/Right/Down,Shift+Top/Left/Right/Down)  
 从Excel文件中粘贴单元格（包含Excel单元的合并及背景色）  
 复制Excel文件中图片及显示
-
-## Doing
 缩放
 
-## To Do
-
+## Doing
 图片拖拽移动  
+
+## To Do
+图片旋转
+
 
