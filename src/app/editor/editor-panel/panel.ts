@@ -1,5 +1,5 @@
 import { cloneDeep } from 'lodash';
-import { Cell, CellRange, Style, KeyCode, CellStyle } from 'src/app/core/model';
+import { Cell, CellRange, Style, KeyboardCode, CellStyle } from 'src/app/core/model';
 import { inRange } from 'src/app/core/utils/function';
 import { FloatElement } from 'src/app/core/model/float-element';
 import { element } from 'protractor';
@@ -1955,10 +1955,10 @@ export class Panel {
 
   // @throttle(20)
   /** 鼠标移动事件 */
-  onMouseMove(event: MouseEvent) {
+  onMouseMove(event: any) {
     // console.log('move');
-    const eventX = event.offsetX / this.multiple;
-    const eventY = event.offsetY / this.multiple;
+    const eventX = (event.offsetX || event.layerX || 0) / this.multiple; // 兼容火狐读offetX，offsetY一直为0问题
+    const eventY = (event.offsetY || event.layerY || 0) / this.multiple;
     this.setMouseCursor(eventX, eventY);
     const preIsScrollXThumbHover = this.state.isScrollXThumbHover;
     const preIsScrollYThumbHover = this.state.isScrollYThumbHover;
@@ -2747,8 +2747,17 @@ export class Panel {
   }
 
   onKeyArrowUpOrDown(event: KeyboardEvent) {
+    if (!this.activeArr || !this.activeArr.length) {
+      const floatArr = this.floatArr.filter(elem => elem.isActive);
+      for (const elem of floatArr) {
+        elem.y += event.code === KeyboardCode.ArrowDown ? 10 : -10;
+        elem.y = elem.y < this.offsetTop ? this.offsetTop : elem.y;
+      }
+      this.refreshView();
+      return;
+    }
     if (!event.shiftKey) {
-      if (event.code === KeyCode.ArrowDown) {
+      if (event.code === KeyboardCode.ArrowDown) {
         const step =
           this.activeCell.position.row +
           this.activeCell.rowSpan -
@@ -2762,7 +2771,7 @@ export class Panel {
           column: this.activeCellPos.column,
           rangeIndex: 0,
         };
-      } else if (event.code === KeyCode.ArrowUp) {
+      } else if (event.code === KeyboardCode.ArrowUp) {
         const step = this.activeCellPos.row - this.activeCell.position.row + 1;
         this.activeCellPos = {
           row:
@@ -2802,14 +2811,14 @@ export class Panel {
           range.rowStart = range.rowEnd;
           range.rowEnd = temp;
         }
-        if (event.code === KeyCode.ArrowDown) {
+        if (event.code === KeyboardCode.ArrowDown) {
           const isExpand = range.rowEnd >= range.rowStart;
           range.rowEnd =
             range.rowEnd + 1 > this.rows.length - 1 || event.ctrlKey
               ? this.rows.length - 1
               : range.rowEnd + 1;
           this.recalcRange(range, isExpand);
-        } else if (event.code === KeyCode.ArrowUp) {
+        } else if (event.code === KeyboardCode.ArrowUp) {
           const isExpand = range.rowEnd <= range.rowStart;
           range.rowEnd =
             range.rowEnd - 1 < 1 || event.ctrlKey ? 1 : range.rowEnd - 1;
@@ -2832,8 +2841,17 @@ export class Panel {
   }
 
   onKeyArrowLeftOrRight(event: KeyboardEvent) {
+    if (!this.activeArr || !this.activeArr.length) {
+      const floatArr = this.floatArr.filter(elem => elem.isActive);
+      for (const elem of floatArr) {
+        elem.x += event.code === KeyboardCode.ArrowRight ? 10 : -10;
+        elem.x = elem.x < this.offsetLeft ? this.offsetLeft : elem.x;
+      }
+      this.refreshView();
+      return;
+    }
     if (!event.shiftKey) {
-      if (event.code === KeyCode.ArrowRight) {
+      if (event.code === KeyboardCode.ArrowRight) {
         const step =
           this.activeCell.position.column +
           this.activeCell.colSpan -
@@ -2847,7 +2865,7 @@ export class Panel {
               : this.activeCellPos.column + step,
           rangeIndex: 0,
         };
-      } else if (event.code === KeyCode.ArrowLeft) {
+      } else if (event.code === KeyboardCode.ArrowLeft) {
         const step =
           this.activeCellPos.column - this.activeCell.position.column + 1;
         this.activeCellPos = {
@@ -2887,14 +2905,14 @@ export class Panel {
           range.columnStart = range.columnEnd;
           range.columnEnd = temp;
         }
-        if (event.code === KeyCode.ArrowRight) {
+        if (event.code === KeyboardCode.ArrowRight) {
           const isExpand = range.columnEnd >= range.columnStart;
           range.columnEnd =
             range.columnEnd + 1 > this.cells[0].length - 1 || event.ctrlKey
               ? this.cells[0].length - 1
               : range.columnEnd + 1;
           this.recalcRange(range, isExpand);
-        } else if (event.code === KeyCode.ArrowLeft) {
+        } else if (event.code === KeyboardCode.ArrowLeft) {
           const isExpand = range.columnEnd <= range.columnStart;
           range.columnEnd =
             range.columnEnd - 1 < 1 || event.ctrlKey ? 1 : range.columnEnd - 1;
@@ -2904,7 +2922,7 @@ export class Panel {
         //   requestAnimationFrame(() => {
         this.resetCellPerspective(
           this.cells[range.rowEnd === Infinity ? 0 : range.rowEnd][
-            event.code === KeyCode.ArrowRight
+            event.code === KeyboardCode.ArrowRight
               ? Math.max(range.columnStart, range.columnEnd)
               : Math.min(range.columnStart, range.columnEnd)
           ]
@@ -2930,7 +2948,7 @@ export class Panel {
         Math.max(this.activeArr[0].columnStart, this.activeArr[0].columnEnd)
     ) {
       if (!event.shiftKey) {
-        if (event.code === KeyCode.Tab) {
+        if (event.code === KeyboardCode.Tab) {
           const step =
             this.activeCell.position.column +
             this.activeCell.colSpan -
@@ -2944,7 +2962,7 @@ export class Panel {
                 : this.activeCellPos.column + step,
             rangeIndex: 0,
           };
-        } else if (event.code === KeyCode.Enter) {
+        } else if (event.code === KeyboardCode.Enter) {
           const step =
             this.activeCell.position.row +
             this.activeCell.rowSpan -
@@ -2960,7 +2978,7 @@ export class Panel {
           };
         }
       } else {
-        if (event.code === KeyCode.Tab) {
+        if (event.code === KeyboardCode.Tab) {
           const step =
             this.activeCellPos.column - this.activeCell.position.column + 1;
           this.activeCellPos = {
@@ -2971,7 +2989,7 @@ export class Panel {
                 : this.activeCellPos.column - 1,
             rangeIndex: 0,
           };
-        } else if (event.code === KeyCode.Enter) {
+        } else if (event.code === KeyboardCode.Enter) {
           const step =
             this.activeCellPos.row - this.activeCell.position.row + 1;
           this.activeCellPos = {
@@ -3004,7 +3022,7 @@ export class Panel {
     } else {
       let { row, column, rangeIndex } = this.activeCellPos;
       let next = false;
-      if (event.code === KeyCode.Tab) {
+      if (event.code === KeyboardCode.Tab) {
         column = event.shiftKey
           ? this.activeCell.position.column - 1
           : this.activeCell.position.column + this.activeCell.colSpan;
@@ -3081,7 +3099,7 @@ export class Panel {
             }
           }
         }
-      } else if (event.code === KeyCode.Enter) {
+      } else if (event.code === KeyboardCode.Enter) {
         row = event.shiftKey
           ? this.activeCell.position.row - 1
           : this.activeCell.position.row + this.activeCell.rowSpan;
@@ -3248,7 +3266,7 @@ export class Panel {
   onKeyPageUpOrDown(event: KeyboardEvent) {
     let posY =
       this.cells[this.activeCellPos.row][this.activeCellPos.column].y +
-      (event.code === KeyCode.PageDown ? 1 : -1) * this.clientHeight;
+      (event.code === KeyboardCode.PageDown ? 1 : -1) * this.clientHeight;
     posY = posY < this.offsetTop ? this.offsetTop : posY;
     let i = this.activeCellPos.row;
     while (true) {
@@ -3296,7 +3314,7 @@ export class Panel {
         this.resetCellPerspective(
           event.shiftKey
             ? this.cells[
-                event.code === KeyCode.PageDown
+                event.code === KeyboardCode.PageDown
                   ? Math.max(
                       this.activeArr[0].rowStart,
                       this.activeArr[0].rowEnd
@@ -3314,7 +3332,7 @@ export class Panel {
         // this.isTicking = true;
         break;
       } else {
-        event.code === KeyCode.PageDown ? i++ : i--;
+        event.code === KeyboardCode.PageDown ? i++ : i--;
       }
     }
   }
@@ -3355,32 +3373,32 @@ export class Panel {
   onKeyDown(event: KeyboardEvent) {
     // console.log('keydown', event);
     switch (event.code) {
-      case KeyCode.Tab:
-      case KeyCode.Enter:
+      case KeyboardCode.Tab:
+      case KeyboardCode.Enter:
         event.preventDefault();
         this.onKeyTabOrEnter(event);
         this.refreshView();
         break;
-      case KeyCode.ArrowUp:
-      case KeyCode.ArrowDown:
+      case KeyboardCode.ArrowUp:
+      case KeyboardCode.ArrowDown:
         event.preventDefault();
         this.onKeyArrowUpOrDown(event);
         break;
-      case KeyCode.ArrowLeft:
-      case KeyCode.ArrowRight:
+      case KeyboardCode.ArrowLeft:
+      case KeyboardCode.ArrowRight:
         event.preventDefault();
         this.onKeyArrowLeftOrRight(event);
         break;
-      case KeyCode.Home:
+      case KeyboardCode.Home:
         event.preventDefault();
         this.onKeyHome(event);
         break;
-      case KeyCode.PageUp:
-      case KeyCode.PageDown:
+      case KeyboardCode.PageUp:
+      case KeyboardCode.PageDown:
         event.preventDefault();
         this.onKeyPageUpOrDown(event);
         break;
-      case KeyCode.Delete:
+      case KeyboardCode.Delete:
         if (this.floatArr.find((elem) => elem.isActive)) {
           for (let i = this.floatArr.length - 1; i >= 0; i--) {
             if (this.floatArr[i].isActive) {
@@ -3393,7 +3411,7 @@ export class Panel {
           this.deleteContent(this.activeArr);
         }
         break;
-      case KeyCode.Backspace:
+      case KeyboardCode.Backspace:
         this.resetCellPerspective(
           this.cells[this.activeCellPos.row][this.activeCellPos.column]
         );
@@ -3404,7 +3422,7 @@ export class Panel {
         this.editingCell.content.value = null;
         this.state.isCellEdit = true;
         break;
-      case KeyCode.KeyA:
+      case KeyboardCode.KeyA:
         if (event.ctrlKey) {
           event.preventDefault();
           this.activeArr = [
@@ -3419,7 +3437,7 @@ export class Panel {
           this.drawRuler(this.ctx);
         }
         break;
-      case KeyCode.KeyC:
+      case KeyboardCode.KeyC:
         if (event.ctrlKey) {
           event.preventDefault();
           if (this.activeArr.length === 1) {
@@ -3433,7 +3451,7 @@ export class Panel {
           }
         }
         break;
-      case KeyCode.KeyX:
+      case KeyboardCode.KeyX:
         if (event.ctrlKey) {
           event.preventDefault();
           if (this.activeArr.length === 1) {
@@ -3447,7 +3465,7 @@ export class Panel {
           }
         }
         break;
-      case KeyCode.KeyV:
+      case KeyboardCode.KeyV:
         if (event.ctrlKey) {
           // event.preventDefault();
           if (!this.paste()) {
@@ -3455,7 +3473,7 @@ export class Panel {
           }
         }
         break;
-      case KeyCode.Escape:
+      case KeyboardCode.Escape:
         this.clipBoard = null;
         break;
       default:
@@ -3684,29 +3702,29 @@ export class Panel {
 
   onEditCellKeyDown(event: KeyboardEvent) {
     switch (event.code) {
-      case KeyCode.Tab:
-      case KeyCode.Enter:
+      case KeyboardCode.Tab:
+      case KeyboardCode.Enter:
         this.editCellCompelte();
         event.preventDefault();
         this.onKeyTabOrEnter(event);
         break;
-      case KeyCode.ArrowUp:
-      case KeyCode.ArrowDown:
+      case KeyboardCode.ArrowUp:
+      case KeyboardCode.ArrowDown:
         if (!this.editingCell.content || !this.editingCell.content.value) {
           this.editCellCompelte();
           event.preventDefault();
           this.onKeyArrowUpOrDown(event);
         }
         break;
-      case KeyCode.ArrowLeft:
-      case KeyCode.ArrowRight:
+      case KeyboardCode.ArrowLeft:
+      case KeyboardCode.ArrowRight:
         if (!this.editingCell.content || !this.editingCell.content.value) {
           this.editCellCompelte();
           event.preventDefault();
           this.onKeyArrowLeftOrRight(event);
         }
         break;
-      case KeyCode.Escape:
+      case KeyboardCode.Escape:
         this.clipBoard = null;
         this.editCellCompelte(false);
         break;
@@ -4266,6 +4284,7 @@ export class Panel {
         }
       }
     }
+    this.canvas.focus();
   };
 
   addImage(img) {

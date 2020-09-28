@@ -104,10 +104,13 @@ export class EditorPanelComponent
 
   insertImage(event) {
     console.log(event);
-    if (/image\/\w*/.test(event.target.files[0].type)) {
-      createImageBitmap(event.target.files[0]).then((img) => {
-        this.addImage(img);
-      });
+    for (const file of event.target.files) {
+      if (/image\/\w*/.test(file.type)) {
+        createImageBitmap(event.target.files[0]).then((img) => {
+          this.addImage(img);
+        });
+      }
     }
+    this.canvas.focus();
   }
 }
