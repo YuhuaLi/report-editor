@@ -540,10 +540,15 @@ export class Panel {
       cellCtx.fillRect(x, y, width, height);
       if (columns[i].content.value) {
         cellCtx.fillStyle = columns[0].style.color;
+        const textMetrics = cellCtx.measureText(columns[i].content.value);
         cellCtx.fillText(
           columns[i].content.value,
           x + width / 2,
-          columns[i].y + columns[i].height / 2
+          columns[i].y +
+            columns[i].height / 2 +
+            ((textMetrics.actualBoundingBoxAscent || 0) -
+              (textMetrics.actualBoundingBoxDescent || 0)) /
+              2
         );
       }
       if (clip) {
@@ -611,11 +616,16 @@ export class Panel {
       cellCtx.fillStyle = rows[i].style.background;
       cellCtx.fillRect(x, y, width, height);
       if (rows[i].content.value) {
+        const textMetrics = cellCtx.measureText(rows[i].content.value);
         cellCtx.fillStyle = columns[0].style.color;
         cellCtx.fillText(
           rows[i].content.value,
           rows[i].x + rows[i].width / 2,
-          y + height / 2,
+          y +
+            height / 2 +
+            ((textMetrics.actualBoundingBoxAscent || 0) -
+              (textMetrics.actualBoundingBoxDescent || 0)) /
+              2,
           rows[i].width - 2 * columns[0].style.borderWidth
         );
       }
@@ -783,6 +793,7 @@ export class Panel {
       ) {
         cellCtx.textBaseline = cell.style.textBaseline as CanvasTextBaseline;
       }
+      const textMetrics = cellCtx.measureText(cell.content.value);
       cellCtx.fillText(
         cell.content.value,
         x +
@@ -791,7 +802,11 @@ export class Panel {
             : cell.style.textAlign === this.style.cellTextAlignRight
             ? width - 2 * cell.style.borderWidth
             : cell.style.borderWidth),
-        y + height / 2
+        y +
+          height / 2 +
+          ((textMetrics.actualBoundingBoxAscent || 0) -
+            (textMetrics.actualBoundingBoxDescent || 0)) /
+            2
         // width - 2 * cell.borderWidth
       );
     }
@@ -1750,6 +1765,10 @@ export class Panel {
           this.state.resizeFloatPos = floatElemntResizePos;
         } else {
           this.state.isMoveFloat = true;
+          floatElement.moveOrigin = {
+            x: eventX + this.scrollLeft - floatElement.x,
+            y: eventY + this.scrollTop - floatElement.y,
+          };
         }
         if (event.ctrlKey || event.shiftKey) {
           floatElement.isActive = true;
@@ -1934,7 +1953,7 @@ export class Panel {
     }
   }
 
-  @throttle(20)
+  // @throttle(20)
   /** 鼠标移动事件 */
   onMouseMove(event: MouseEvent) {
     // console.log('move');
@@ -2074,13 +2093,28 @@ export class Panel {
   moveFloat(eventX, eventY) {
     const activeArr = this.floatArr.filter((elem) => elem.isActive);
     for (const floatElem of activeArr) {
-      floatElem.x += eventX - this.mousePoint.x;
-      floatElem.y += eventY - this.mousePoint.y;
+      if (
+        !(
+          eventX + this.scrollLeft - this.offsetLeft < floatElem.moveOrigin.x &&
+          eventX > this.mousePoint.x
+        )
+      ) {
+        floatElem.x += eventX - this.mousePoint.x;
+      }
+      if (
+        !(
+          eventY + this.scrollTop - this.offsetTop < floatElem.moveOrigin.y &&
+          eventY > this.mousePoint.y
+        )
+      ) {
+        floatElem.y += eventY - this.mousePoint.y;
+      }
 
       floatElem.x =
         floatElem.x < this.offsetLeft ? this.offsetLeft : floatElem.x;
       floatElem.y = floatElem.y < this.offsetTop ? this.offsetTop : floatElem.y;
     }
+
     this.refreshView();
   }
 
@@ -3637,7 +3671,7 @@ export class Panel {
   editCellCompelte(change = true) {
     if (!change) {
       this.editingCell.content.value = this.editingCell.content.previousValue;
-    } else if(this.editingCell) {
+    } else if (this.editingCell) {
       this.editingCell.content.previousValue = this.editingCell.content.value;
       this.drawCell(this.ctx, this.editingCell, true);
       this.drawRuler(this.ctx);

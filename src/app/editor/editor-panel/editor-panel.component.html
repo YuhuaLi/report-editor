@@ -173,7 +173,12 @@
       {{ fontSize }}
     </option>
   </select>
-  <input type="file" placeholder="insert image" (change)="insertImage($event)" accept="image/*" />
+  <input
+    type="file"
+    placeholder="insert image"
+    (change)="insertImage($event)"
+    accept="image/*"
+  />
 </div>
 <div class="formula-bar">
   <label class="bar-label">{{ (activeCell && activeCell.index) || "" }}</label
@@ -226,7 +231,7 @@
             color: editingCell?.style.color,
             'font-family': editingCell?.style.fontFamily,
             'font-size.pt': editingCell?.style.fontSize * multiple,
-            'padding.px': editingCell?.style.borderWidth * multiple,
+            'border-width.px': editingCell?.style.borderWidth * multiple,
             'left.px':
               (editingCell?.x - scrollLeft - offsetLeft + 1) * multiple,
             'top.px': (editingCell?.y - scrollTop - offsetTop + 1) * multiple,
@@ -234,6 +239,9 @@
               (editingCell?.width - 2 * editingCell?.style.borderWidth) *
               multiple,
             'height.px':
+              (editingCell?.height - 2 * editingCell?.style.borderWidth) *
+              multiple,
+            'line-height.px':
               (editingCell?.height - 2 * editingCell?.style.borderWidth) *
               multiple
           }"

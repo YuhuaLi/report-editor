@@ -14,4 +14,5 @@ export class FloatElement {
   height: number;
   content: any;
   isActive: boolean;
+  moveOrigin: { x: number; y: number };
 }
