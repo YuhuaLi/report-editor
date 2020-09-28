@@ -1,5 +1,11 @@
 import { cloneDeep } from 'lodash';
-import { Cell, CellRange, Style, KeyboardCode, CellStyle } from 'src/app/core/model';
+import {
+  Cell,
+  CellRange,
+  Style,
+  KeyboardCode,
+  CellStyle,
+} from 'src/app/core/model';
 import { inRange } from 'src/app/core/utils/function';
 import { FloatElement } from 'src/app/core/model/float-element';
 import { element } from 'protractor';
@@ -2748,7 +2754,7 @@ export class Panel {
 
   onKeyArrowUpOrDown(event: KeyboardEvent) {
     if (!this.activeArr || !this.activeArr.length) {
-      const floatArr = this.floatArr.filter(elem => elem.isActive);
+      const floatArr = this.floatArr.filter((elem) => elem.isActive);
       for (const elem of floatArr) {
         elem.y += event.code === KeyboardCode.ArrowDown ? 10 : -10;
         elem.y = elem.y < this.offsetTop ? this.offsetTop : elem.y;
@@ -2842,7 +2848,7 @@ export class Panel {
 
   onKeyArrowLeftOrRight(event: KeyboardEvent) {
     if (!this.activeArr || !this.activeArr.length) {
-      const floatArr = this.floatArr.filter(elem => elem.isActive);
+      const floatArr = this.floatArr.filter((elem) => elem.isActive);
       for (const elem of floatArr) {
         elem.x += event.code === KeyboardCode.ArrowRight ? 10 : -10;
         elem.x = elem.x < this.offsetLeft ? this.offsetLeft : elem.x;
@@ -3405,6 +3411,10 @@ export class Panel {
               this.floatArr.splice(i, 1);
             }
           }
+          this.activeCellPos = { row: 1, column: 1, rangeIndex: 0 };
+          this.activeArr = [
+            { rowStart: 1, columnStart: 1, rowEnd: 1, columnEnd: 1 },
+          ];
           this.drawFloat();
           this.setActive();
         } else {
