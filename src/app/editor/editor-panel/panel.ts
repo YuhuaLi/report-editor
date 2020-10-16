@@ -312,7 +312,7 @@ export class Panel {
             ? this.generateColumnNum(ck)
             : null, //this.generateColumnNum(ck) + this.generateRowNum(rk)
         previousValue: null,
-        previouseHtml: null
+        previouseHtml: null,
       },
       style: {
         fontWeight:
@@ -882,19 +882,12 @@ export class Panel {
         if (cellCtx.fillStyle !== textObj.color) {
           cellCtx.fillStyle = textObj.color || cell.style.color;
         }
-        if (
-          (textObj.fontStyle && cell.style.fontStyle !== textObj.fontStyle) ||
-          (textObj.fontFamily &&
-            cell.style.fontFamily !== textObj.fontFamily) ||
-          (textObj.fontSize && cell.style.fontSize !== textObj.fontSize) ||
-          (textObj.fontWeight && cell.style.fontWeight !== textObj.fontWeight)
-        ) {
-          cellCtx.font = `${textObj.fontStyle || cell.style.fontStyle} ${
-            textObj.fontWeight || cell.style.fontWeight
-          } ${textObj.fontSize || cell.style.fontSize}pt ${
-            textObj.fontFamily || cell.style.fontFamily
-          }`;
-        }
+
+        cellCtx.font = `${textObj.fontStyle || cell.style.fontStyle} ${
+          textObj.fontWeight || cell.style.fontWeight
+        } ${textObj.fontSize || cell.style.fontSize}pt ${
+          textObj.fontFamily || cell.style.fontFamily
+        }`;
 
         let textX;
         let textY;
@@ -1004,9 +997,7 @@ export class Panel {
             text: node.textContent,
             textAlign: style.textAlign,
             color: style.color,
-            fontSize:
-              (style.fontSize && (parseInt(style.fontSize, 10) * 3) / 4) ||
-              null,
+            fontSize: (style.fontSize && parseInt(style.fontSize, 10)) || null,
             fontFamily: style.fontFamily,
             fontStyle: style.fontStyle,
             fontWeight: style.fontWeight,
