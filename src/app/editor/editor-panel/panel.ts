@@ -3567,6 +3567,7 @@ export class Panel {
         ) {
           if (this.cells[rs][cs].content && this.cells[rs][cs].content.value) {
             this.cells[rs][cs].content.value = null;
+            this.cells[rs][cs].content.html = null;
             this.drawCell(this.ctx, this.cells[rs][cs]);
           }
         }
