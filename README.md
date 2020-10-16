@@ -1,6 +1,6 @@
 # ReportEditor
-最终目标：实现一个Excel报表编辑器
-目前正在处理前端Excel实现，抽空编码，进度缓慢
+最终目标：实现一个Excel报表编辑器  
+目前正在处理前端Excel实现，抽空编码，进度缓慢  
 [Demo](https://yuhuali.github.io/report-editor)
 
 ## Completed
