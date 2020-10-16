@@ -874,6 +874,12 @@ export class Panel {
               metrics.actualBoundingBoxDescent || cell.style.fontSize * 1.5
         )
       );
+      const maxTextHeightMetrics = textMetricsArr.find(
+        (metrics) =>
+          (metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent ||
+            cell.style.fontSize * 1.5) === maxTextHeight
+      );
+
       const totalTextWidth = textMetricsArr
         .map((metrics) => metrics.width)
         .reduce((acc, cur) => acc + cur, 0);
@@ -902,17 +908,24 @@ export class Panel {
               .reduce((acc, cur) => acc + cur, 0) +
             textMetricsArr[index].width / 2 +
             0.5;
-          const textHeight =
-            textMetricsArr[index].actualBoundingBoxAscent +
-              textMetricsArr[index].actualBoundingBoxDescent ||
-            cell.style.fontSize * 1.5;
+          // const textHeight =
+          //   textMetricsArr[index].actualBoundingBoxAscent +
+          //     textMetricsArr[index].actualBoundingBoxDescent ||
+          //   cell.style.fontSize * 1.5;
+          // textY =
+          //   y +
+          //   height / 2 +
+          //   maxTextHeight / 2 -
+          //   textHeight / 2 +
+          //   ((textMetricsArr[index].actualBoundingBoxAscent || 0) -
+          //     (textMetricsArr[index].actualBoundingBoxDescent || 0)) /
+          //     2 +
+          //   0.5;
           textY =
             y +
             height / 2 +
-            maxTextHeight / 2 -
-            textHeight / 2 +
-            ((textMetricsArr[index].actualBoundingBoxAscent || 4) -
-              (textMetricsArr[index].actualBoundingBoxDescent || 0)) /
+            ((maxTextHeightMetrics.actualBoundingBoxAscent || 0) -
+              (maxTextHeightMetrics.actualBoundingBoxDescent || 0)) /
               2 +
             0.5;
         } else if (cell.style.textAlign === this.style.cellTextAlignLeft) {
@@ -924,17 +937,24 @@ export class Panel {
               .map((metrics) => metrics.width)
               .reduce((acc, cur) => acc + cur, 0) +
             0.5;
-          const textHeight =
-            textMetricsArr[index].actualBoundingBoxAscent +
-              textMetricsArr[index].actualBoundingBoxDescent ||
-            cell.style.fontSize;
+          // const textHeight =
+          //   textMetricsArr[index].actualBoundingBoxAscent +
+          //     textMetricsArr[index].actualBoundingBoxDescent ||
+          //   cell.style.fontSize;
+          // textY =
+          //   y +
+          //   height / 2 +
+          //   maxTextHeight / 2 -
+          //   textHeight / 2 +
+          //   ((textMetricsArr[index].actualBoundingBoxAscent || 0) -
+          //     (textMetricsArr[index].actualBoundingBoxDescent || 0)) /
+          //     2 +
+          //   0.5;
           textY =
             y +
             height / 2 +
-            maxTextHeight / 2 -
-            textHeight / 2 +
-            ((textMetricsArr[index].actualBoundingBoxAscent || 0) -
-              (textMetricsArr[index].actualBoundingBoxDescent || 0)) /
+            ((maxTextHeightMetrics.actualBoundingBoxAscent || 0) -
+              (maxTextHeightMetrics.actualBoundingBoxDescent || 0)) /
               2 +
             0.5;
         } else if (cell.style.textAlign === this.style.cellTextAlignRight) {
@@ -947,17 +967,24 @@ export class Panel {
               .map((metrics) => metrics.width)
               .reduce((acc, cur) => acc + cur, 0) +
             0.5;
-          const textHeight =
-            textMetricsArr[index].actualBoundingBoxAscent +
-              textMetricsArr[index].actualBoundingBoxDescent ||
-            cell.style.fontSize;
+          // const textHeight =
+          //   textMetricsArr[index].actualBoundingBoxAscent +
+          //     textMetricsArr[index].actualBoundingBoxDescent ||
+          //   cell.style.fontSize;
+          // textY =
+          //   y +
+          //   height / 2 +
+          //   maxTextHeight / 2 -
+          //   textHeight / 2 +
+          //   ((textMetricsArr[index].actualBoundingBoxAscent || 0) -
+          //     (textMetricsArr[index].actualBoundingBoxDescent || 0)) /
+          //     2 +
+          //   0.5;
           textY =
             y +
             height / 2 +
-            maxTextHeight / 2 -
-            textHeight / 2 +
-            ((textMetricsArr[index].actualBoundingBoxAscent || 0) -
-              (textMetricsArr[index].actualBoundingBoxDescent || 0)) /
+            ((maxTextHeightMetrics.actualBoundingBoxAscent || 0) -
+              (maxTextHeightMetrics.actualBoundingBoxDescent || 0)) /
               2 +
             0.5;
         }
@@ -997,7 +1024,11 @@ export class Panel {
             text: node.textContent,
             textAlign: style.textAlign,
             color: style.color,
-            fontSize: (style.fontSize && parseInt(style.fontSize, 10)) || null,
+            fontSize:
+              (style.fontSize &&
+                parseInt(style.fontSize, 10) *
+                  (/pt/.test(style.fontSize) ? 1 : 0.75)) ||
+              null,
             fontFamily: style.fontFamily,
             fontStyle: style.fontStyle,
             fontWeight: style.fontWeight,

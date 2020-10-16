@@ -30,7 +30,7 @@ export const Style = {
   cellTextAlignCenter: 'center',
   cellTextAlignLeft: 'left',
   cellTextAlignRight: 'right',
-  cellTextBaseline: 'middle',
+  cellTextBaseline: 'alphabetic',
   activeCellBorderWidth: 4,
   activeCellBorderColor: '#090',
   activeCellShadowColor: '#0f0',
