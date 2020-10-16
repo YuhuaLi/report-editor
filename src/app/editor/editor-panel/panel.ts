@@ -310,8 +310,9 @@ export class Panel {
             ? this.generateRowNum(rk)
             : isXRuler && !isYRuler
             ? this.generateColumnNum(ck)
-            : this.generateColumnNum(ck) + this.generateRowNum(rk),
+            : null, //this.generateColumnNum(ck) + this.generateRowNum(rk)
         previousValue: null,
+        previouseHtml: null
       },
       style: {
         fontWeight:
@@ -2025,6 +2026,7 @@ export class Panel {
             this.clipBoard = null;
             this.editingCell = cell;
             this.editingCell.content.previousValue = this.editingCell.content.value;
+            this.editingCell.content.previousHtml = this.editingCell.content.html;
             this.state.isCellEdit = true;
             this.activeArr = [
               {
@@ -3691,7 +3693,7 @@ export class Panel {
 
   onKeyPress(event: KeyboardEvent) {
     // console.log('keypress', event);
-    // event.preventDefault();
+    event.preventDefault();
     if (!event.ctrlKey) {
       this.resetCellPerspective(
         this.cells[this.activeCellPos.row][this.activeCellPos.column]
@@ -3701,6 +3703,7 @@ export class Panel {
         this.activeCellPos.column
       ];
       this.editingCell.content.value = event.key;
+      this.editingCell.content.html = event.key;
       this.state.isCellEdit = true;
     }
   }
@@ -3908,14 +3911,17 @@ export class Panel {
   editCellCompelte(change = true) {
     if (!change) {
       this.editingCell.content.value = this.editingCell.content.previousValue;
+      this.editingCell.content.html = this.editingCell.content.previousHtml;
     } else if (this.editingCell) {
       this.editingCell.content.previousValue = this.editingCell.content.value;
+      this.editingCell.content.previousHtml = this.editingCell.content.html;
       this.drawCell(this.ctx, this.editingCell, true);
       this.drawRuler(this.ctx);
       this.drawScrollBar(this.ctx);
     }
     this.editingCell = null;
     this.state.isCellEdit = false;
+    this.refreshView();
     this.canvas.focus();
   }
 

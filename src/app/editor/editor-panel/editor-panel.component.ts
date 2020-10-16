@@ -120,6 +120,7 @@ export class EditorPanelComponent
     if (!this.editingCell) {
       this.editingCell = this.activeCell;
       this.editingCell.content.previousValue = this.editingCell.content.value;
+      this.editingCell.content.previousHtml = this.editingCell.content.html;
     }
     // console.log(this.getSelection(), this.getSelection().toString());
   }
@@ -278,7 +279,7 @@ export class EditorPanelComponent
     }
     const textObj = this.parseNode(element);
     if (prev.length === cur.length) {
-      //replace
+      // replace
       let i = 0;
       let index = -1;
       let diffLen = 0;
