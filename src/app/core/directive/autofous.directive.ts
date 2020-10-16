@@ -13,8 +13,8 @@ export class AutoFocusDirective implements OnInit, OnChanges {
     }
   }
   ngOnChanges(changes: SimpleChanges) {
-    if (this.appAutoFocus) {
-      this.elementRef.nativeElement.focus();
-    }
+    // if (this.appAutoFocus) {
+    //   this.elementRef.nativeElement.focus();
+    // }
   }
 }

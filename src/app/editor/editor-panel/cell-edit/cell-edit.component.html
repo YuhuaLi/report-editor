@@ -1,0 +1,31 @@
+<div
+  #editArea
+  contenteditable="true"
+  [appAutoFocus]="state?.isCellEdit"
+  name="editCell"
+  class="editCell"
+  autocomplete="off"
+  [ngStyle]="{
+    background: editingCell?.style.background,
+    'text-align': editingCell?.style.textAlign,
+    color: editingCell?.style.color,
+    'font-family': editingCell?.style.fontFamily,
+    'font-size.pt': editingCell?.style.fontSize * multiple,
+    'font-weight': editingCell?.style.fontWeight,
+    'border-width.px': editingCell?.style.borderWidth * multiple,
+    'left.px': (editingCell?.x - scrollLeft - offsetLeft + 1) * multiple + 0.5,
+    'top.px': (editingCell?.y - scrollTop - offsetTop + 1) * multiple + 0.5,
+    'width.px':
+      (editingCell?.width - 2 * editingCell?.style.borderWidth) * multiple,
+    'height.px':
+      (editingCell?.height - 2 * editingCell?.style.borderWidth) * multiple,
+    'line-height.px':
+      (editingCell?.height - 2 * editingCell?.style.borderWidth) * multiple
+  }"
+  [innerHTML]="html"
+  (input)="
+    editingCell && (editingCell.content.value = $event.target.textContent)
+  "
+  (keydown)="onkeydown.emit($event)"
+  (paste)="onpaste($event)"
+></div>

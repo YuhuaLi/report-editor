@@ -1,4 +1,4 @@
-:host {
+:host ::ng-deep {
   .panel-wrapper {
     position: relative;
     overflow: hidden;
@@ -87,6 +87,8 @@
       position: absolute;
       box-sizing: border-box;
       pointer-events: auto;
+      white-space: nowrap;
+      overflow: hidden;
       // border: 2px solid #096;
       border: none;
       &:focus {

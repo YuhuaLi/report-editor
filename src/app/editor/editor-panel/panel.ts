@@ -107,7 +107,7 @@ export class Panel {
     this.activeArr = [{ rowStart: 1, columnStart: 1, rowEnd: 1, columnEnd: 1 }];
     this.refreshView();
     this.canvas.focus();
-    document.onpaste = this.onPaste;
+    // document.onpaste = this.onPaste;
     document.onmouseup = this.onMouseUp;
   }
 
@@ -310,7 +310,7 @@ export class Panel {
             ? this.generateRowNum(rk)
             : isXRuler && !isYRuler
             ? this.generateColumnNum(ck)
-            : null,
+            : this.generateColumnNum(ck) + this.generateRowNum(rk),
         previousValue: null,
       },
       style: {
@@ -552,7 +552,7 @@ export class Panel {
           x + width / 2,
           columns[i].y +
             columns[i].height / 2 +
-            ((textMetrics.actualBoundingBoxAscent || 0) -
+            ((textMetrics.actualBoundingBoxAscent || 4) -
               (textMetrics.actualBoundingBoxDescent || 0)) /
               2
         );
@@ -629,7 +629,7 @@ export class Panel {
           rows[i].x + rows[i].width / 2,
           y +
             height / 2 +
-            ((textMetrics.actualBoundingBoxAscent || 0) -
+            ((textMetrics.actualBoundingBoxAscent || 4) -
               (textMetrics.actualBoundingBoxDescent || 0)) /
               2,
           rows[i].width - 2 * columns[0].style.borderWidth
@@ -747,20 +747,43 @@ export class Panel {
     const width = cell.width;
     const height = cell.height;
     let cellCtx: CanvasRenderingContext2D;
-    if (cell.content.value) {
-      if (
-        ctx.font !==
-        `${cell.style.fontStyle} ${cell.style.fontWeight} ${cell.style.fontSize}pt ${cell.style.fontFamily}`
-      ) {
-        ctx.font = `${cell.style.fontStyle} ${cell.style.fontWeight} ${cell.style.fontSize}pt ${cell.style.fontFamily}`;
+    if (cell.content.html || cell.content.value) {
+      const textArr = this.parseNode(
+        this.htmlToElement(cell.content.html || cell.content.value)
+      );
+      const hasBold = !!textArr.find((text) => text.fontWeight === 'bold');
+      const allHasItalic = textArr.every((text) => text.fontStyle === 'italic');
+      const textMetricsArr = [];
+      for (const textObj of textArr) {
+        ctx.save();
+        ctx.font = `${allHasItalic ? 'italic' : 'normal'} ${
+          hasBold ? 'bold' : 'normal'
+        } ${textObj.fontSize || cell.style.fontSize}pt ${
+          textObj.fontFamily || cell.style.fontFamily
+        }`;
+        textMetricsArr.push(ctx.measureText(textObj.text));
+        ctx.restore();
       }
+      const maxTextHeight = Math.max(
+        ...textMetricsArr.map(
+          (metrics) =>
+            metrics.actualBoundingBoxAscent +
+              metrics.actualBoundingBoxDescent ||
+            Math.max(
+              ...textArr.map(
+                (textObj) => textObj.fontSize || cell.style.fontSize
+              )
+            ) * 1.5
+        )
+      );
+      const totalTextWidth = textMetricsArr
+        .map((metrics) => metrics.width)
+        .reduce((acc, cur) => acc + cur, 0);
+      clip =
+        clip ||
+        totalTextWidth > cell.width - 2 * cell.style.borderWidth ||
+        maxTextHeight > cell.height - 2 * cell.style.borderWidth;
     }
-    clip =
-      clip ||
-      (cell.content.value &&
-        (cell.style.fontSize * 1.5 > cell.height - 2 * cell.style.borderWidth ||
-          ctx.measureText(cell.content.value).width >
-            cell.width - 2 * cell.style.borderWidth));
     if (clip) {
       cellCtx = this.offscreenCtx;
       cellCtx.clearRect(0, 0, this.width, this.height);
@@ -772,49 +795,20 @@ export class Panel {
       if (cellCtx.fillStyle !== cell.style.background) {
         cellCtx.fillStyle = cell.style.background;
       }
-      cellCtx.fillRect(x, y, width, height);
+      cellCtx.fillRect(x + 0.5, y + 0.5, width, height);
     }
     if (cellCtx.strokeStyle !== cell.style.borderColor) {
       cellCtx.strokeStyle = cell.style.borderColor;
     }
     cellCtx.strokeRect(x + 0.5, y + 0.5, width, height);
-    if (cell.content.value && clip) {
+    if (cell.content.value || cell.content.html) {
       if (
         cellCtx.font !==
         `${cell.style.fontStyle} ${cell.style.fontWeight} ${cell.style.fontSize}pt ${cell.style.fontFamily}`
       ) {
         cellCtx.font = `${cell.style.fontStyle} ${cell.style.fontWeight} ${cell.style.fontSize}pt ${cell.style.fontFamily}`;
       }
-    }
-    if (cell.content.value) {
-      if (cellCtx.fillStyle !== cell.style.color) {
-        cellCtx.fillStyle = cell.style.color;
-      }
-      if (cell.style.textAlign && cellCtx.textAlign !== cell.style.textAlign) {
-        cellCtx.textAlign = cell.style.textAlign as CanvasTextAlign;
-      }
-      if (
-        cell.style.textBaseline &&
-        cellCtx.textBaseline !== cell.style.textBaseline
-      ) {
-        cellCtx.textBaseline = cell.style.textBaseline as CanvasTextBaseline;
-      }
-      const textMetrics = cellCtx.measureText(cell.content.value);
-      cellCtx.fillText(
-        cell.content.value,
-        x +
-          (cell.style.textAlign === this.style.cellTextAlignCenter
-            ? width / 2
-            : cell.style.textAlign === this.style.cellTextAlignRight
-            ? width - 2 * cell.style.borderWidth
-            : cell.style.borderWidth),
-        y +
-          height / 2 +
-          ((textMetrics.actualBoundingBoxAscent || 0) -
-            (textMetrics.actualBoundingBoxDescent || 0)) /
-            2
-        // width - 2 * cell.borderWidth
-      );
+      this.drawCellText(cell, x, y, width, height, cellCtx);
     }
 
     if (clip) {
@@ -831,6 +825,208 @@ export class Panel {
       );
       cellCtx.restore();
     }
+  }
+
+  /** 绘制单元格显示文本 */
+  drawCellText(
+    cell: Cell,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    cellCtx: CanvasRenderingContext2D
+  ) {
+    if (cellCtx.fillStyle !== cell.style.color) {
+      cellCtx.fillStyle = cell.style.color;
+    }
+    if (cell.style.textAlign && cellCtx.textAlign !== cell.style.textAlign) {
+      cellCtx.textAlign = cell.style.textAlign as CanvasTextAlign;
+    }
+    if (
+      cell.style.textBaseline &&
+      cellCtx.textBaseline !== cell.style.textBaseline
+    ) {
+      cellCtx.textBaseline = cell.style.textBaseline as CanvasTextBaseline;
+    }
+    if (cell.content.html || cell.content.value) {
+      const html = cell.content.html || cell.content.value;
+      // console.log(this.htmlToElement(html).childNodes);
+      // console.log(this.parseNode(this.htmlToElement(html)));
+      const textArr = this.parseNode(this.htmlToElement(html));
+      const hasBold = !!textArr.find((text) => text.fontWeight === 'bold');
+      const allHasItalic = textArr.every((text) => text.fontStyle === 'italic');
+      const textMetricsArr = [];
+      for (const textObj of textArr) {
+        cellCtx.save();
+        cellCtx.font = `${textObj.fontStyle || cell.style.fontStyle} ${
+          textObj.fontWeight || cell.style.fontWeight
+        } ${textObj.fontSize || cell.style.fontSize}pt ${
+          textObj.fontFamily || cell.style.fontFamily
+        }`;
+        textMetricsArr.push(cellCtx.measureText(textObj.text));
+        cellCtx.restore();
+      }
+      const maxTextHeight = Math.max(
+        ...textMetricsArr.map(
+          (metrics) =>
+            metrics.actualBoundingBoxAscent +
+              metrics.actualBoundingBoxDescent || cell.style.fontSize * 1.5
+        )
+      );
+      const totalTextWidth = textMetricsArr
+        .map((metrics) => metrics.width)
+        .reduce((acc, cur) => acc + cur, 0);
+      textArr.forEach((textObj, index) => {
+        cellCtx.save();
+        if (cellCtx.fillStyle !== textObj.color) {
+          cellCtx.fillStyle = textObj.color || cell.style.color;
+        }
+        if (
+          (textObj.fontStyle && cell.style.fontStyle !== textObj.fontStyle) ||
+          (textObj.fontFamily &&
+            cell.style.fontFamily !== textObj.fontFamily) ||
+          (textObj.fontSize && cell.style.fontSize !== textObj.fontSize) ||
+          (textObj.fontWeight && cell.style.fontWeight !== textObj.fontWeight)
+        ) {
+          cellCtx.font = `${textObj.fontStyle || cell.style.fontStyle} ${
+            textObj.fontWeight || cell.style.fontWeight
+          } ${textObj.fontSize || cell.style.fontSize}pt ${
+            textObj.fontFamily || cell.style.fontFamily
+          }`;
+        }
+
+        let textX;
+        let textY;
+        if (cell.style.textAlign === this.style.cellTextAlignCenter) {
+          textX =
+            x +
+            width / 2 -
+            totalTextWidth / 2 +
+            textMetricsArr
+              .slice(0, index)
+              .map((metrics) => metrics.width)
+              .reduce((acc, cur) => acc + cur, 0) +
+            textMetricsArr[index].width / 2 +
+            0.5;
+          const textHeight =
+            textMetricsArr[index].actualBoundingBoxAscent +
+              textMetricsArr[index].actualBoundingBoxDescent ||
+            cell.style.fontSize * 1.5;
+          textY =
+            y +
+            height / 2 +
+            maxTextHeight / 2 -
+            textHeight / 2 +
+            ((textMetricsArr[index].actualBoundingBoxAscent || 4) -
+              (textMetricsArr[index].actualBoundingBoxDescent || 0)) /
+              2 +
+            0.5;
+        } else if (cell.style.textAlign === this.style.cellTextAlignLeft) {
+          textX =
+            x +
+            cell.style.borderWidth +
+            textMetricsArr
+              .slice(0, index)
+              .map((metrics) => metrics.width)
+              .reduce((acc, cur) => acc + cur, 0) +
+            0.5;
+          const textHeight =
+            textMetricsArr[index].actualBoundingBoxAscent +
+              textMetricsArr[index].actualBoundingBoxDescent ||
+            cell.style.fontSize;
+          textY =
+            y +
+            height / 2 +
+            maxTextHeight / 2 -
+            textHeight / 2 +
+            ((textMetricsArr[index].actualBoundingBoxAscent || 0) -
+              (textMetricsArr[index].actualBoundingBoxDescent || 0)) /
+              2 +
+            0.5;
+        } else if (cell.style.textAlign === this.style.cellTextAlignRight) {
+          textX =
+            x +
+            width -
+            cell.style.borderWidth -
+            textMetricsArr
+              .slice(index + 1)
+              .map((metrics) => metrics.width)
+              .reduce((acc, cur) => acc + cur, 0) +
+            0.5;
+          const textHeight =
+            textMetricsArr[index].actualBoundingBoxAscent +
+              textMetricsArr[index].actualBoundingBoxDescent ||
+            cell.style.fontSize;
+          textY =
+            y +
+            height / 2 +
+            maxTextHeight / 2 -
+            textHeight / 2 +
+            ((textMetricsArr[index].actualBoundingBoxAscent || 0) -
+              (textMetricsArr[index].actualBoundingBoxDescent || 0)) /
+              2 +
+            0.5;
+        }
+        cellCtx.fillText(textObj.text, textX, textY);
+
+        cellCtx.restore();
+      });
+    }
+    // const textMetrics = cellCtx.measureText(cell.content.value);
+    // const textHeight =
+    //   textMetrics.actualBoundingBoxAscent +
+    //     textMetrics.actualBoundingBoxDescent || cell.style.fontSize * 1.5;
+    // cellCtx.fillText(
+    //   cell.content.value,
+    //   x +
+    //     (cell.style.textAlign === this.style.cellTextAlignCenter
+    //       ? width / 2
+    //       : cell.style.textAlign === this.style.cellTextAlignRight
+    //       ? width - 2 * cell.style.borderWidth
+    //       : cell.style.borderWidth) +
+    //     0.5,
+    //   y +
+    //     height / 2 +
+    //     ((textMetrics.actualBoundingBoxAscent || 4) -
+    //       (textMetrics.actualBoundingBoxDescent || 0)) /
+    //       2 +
+    //     0.5
+    // );
+  }
+
+  parseNode(parentNode, style: any = {}) {
+    const res = [];
+    if (parentNode.childNodes.length) {
+      for (const node of parentNode.childNodes) {
+        if (node instanceof Text) {
+          res.push({
+            text: node.textContent,
+            textAlign: style.textAlign,
+            color: style.color,
+            fontSize:
+              (style.fontSize && (parseInt(style.fontSize, 10) * 3) / 4) ||
+              null,
+            fontFamily: style.fontFamily,
+            fontStyle: style.fontStyle,
+            fontWeight: style.fontWeight,
+            node,
+            parentNode,
+          });
+        } else {
+          res.push(
+            ...this.parseNode(node, {
+              textAlign: node.style.textAlign || style.textAlign,
+              fontSize: node.style.fontSize || style.fontSize,
+              color: node.style.color || style.color,
+              fontFamily: node.style.fontFamily || style.fontFamily,
+              fontStyle: node.style.fontStyle || style.fontStyle,
+              fontWeight: node.style.fontWeight || style.fontWeight,
+            })
+          );
+        }
+      }
+    }
+    return res;
   }
 
   /** 绘制活动单元格or范围 */
@@ -957,18 +1153,20 @@ export class Panel {
           ctx.fillRect(
             this.cells[rowStart][columnStart].x -
               this.scrollLeft +
-              3 * this.style.cellBorderWidth,
+              2 * this.style.cellBorderWidth +
+              0.5,
             this.cells[rowStart][columnStart].y -
               this.scrollTop +
-              3 * this.style.cellBorderWidth,
+              2 * this.style.cellBorderWidth +
+              0.5,
             this.cells[rowEnd][columnEnd].x -
               this.cells[rowStart][columnStart].x +
               this.cells[rowEnd][columnEnd].width -
-              6 * this.style.cellBorderWidth,
+              4 * this.style.cellBorderWidth,
             this.cells[rowEnd][columnEnd].y -
               this.cells[rowStart][columnStart].y +
               this.cells[rowEnd][columnEnd].height -
-              6 * this.style.cellBorderWidth
+              4 * this.style.cellBorderWidth
           );
           if (this.activeCellPos) {
             ctx.restore();
@@ -987,10 +1185,10 @@ export class Panel {
               cell.height
             );
             ctx.strokeRect(
-              cell.x - this.scrollLeft + 3 * this.style.cellBorderWidth,
-              cell.y - this.scrollTop + 3 * this.style.cellBorderWidth,
-              cell.width - 6 * this.style.cellBorderWidth,
-              cell.height - 6 * this.style.cellBorderWidth
+              cell.x - this.scrollLeft + 2 * this.style.cellBorderWidth + 0.5,
+              cell.y - this.scrollTop + 2 * this.style.cellBorderWidth + 0.5,
+              cell.width - 4 * this.style.cellBorderWidth,
+              cell.height - 4 * this.style.cellBorderWidth
             );
           }
         }
@@ -1025,8 +1223,8 @@ export class Panel {
 
         ctx.fillStyle = this.style.selectedCellBackgroundColor;
         ctx.fillRect(
-          this.cells[rowStart][columnStart].x - this.scrollLeft,
-          this.cells[rowStart][columnStart].y - this.scrollTop,
+          this.cells[rowStart][columnStart].x - this.scrollLeft + 0.5,
+          this.cells[rowStart][columnStart].y - this.scrollTop + 0.5,
           this.cells[rowEnd][columnEnd].x -
             this.cells[rowStart][columnStart].x +
             this.cells[rowEnd][columnEnd].width,
@@ -1042,8 +1240,8 @@ export class Panel {
                 .combineCell
             : this.cells[this.activeCellPos.row][this.activeCellPos.column];
           ctx.clearRect(
-            cell.x - this.scrollLeft,
-            cell.y - this.scrollTop,
+            cell.x - this.scrollLeft + 0.5,
+            cell.y - this.scrollTop + 0.5,
             cell.width,
             cell.height
           );
@@ -1053,8 +1251,8 @@ export class Panel {
         // ctx.shadowColor = this.style.activeCellShadowColor;
         // ctx.shadowBlur = this.style.activeCellShadowBlur;
         ctx.strokeRect(
-          this.cells[rowStart][columnStart].x - this.scrollLeft,
-          this.cells[rowStart][columnStart].y - this.scrollTop,
+          this.cells[rowStart][columnStart].x - this.scrollLeft + 0.5,
+          this.cells[rowStart][columnStart].y - this.scrollTop + 0.5,
           this.cells[rowEnd][columnEnd].x -
             this.cells[rowStart][columnStart].x +
             this.cells[rowEnd][columnEnd].width,
@@ -1473,7 +1671,7 @@ export class Panel {
       lastModifyTime: new Date().getTime(),
     };
     if (this.inSelectAllArea(eventX, eventY)) {
-      console.log('all');
+      // console.log('all');
       this.activeArr = [
         {
           rowStart: 1,
@@ -1487,7 +1685,7 @@ export class Panel {
       this.drawRuler(this.ctx);
       // this.drawScrollBar(ctx);
     } else if (this.inRulerXArea(eventX, eventY)) {
-      console.log('rulerx');
+      // console.log('rulerx');
       for (let i = 1, len = this.viewCells[0].length - 1; i < len; i++) {
         if (
           this.viewCells[0][i].width >
@@ -1610,7 +1808,7 @@ export class Panel {
         }
       }
     } else if (this.inRulerYArea(eventX, eventY)) {
-      console.log('rulery', event);
+      // console.log('rulery', event);
       const rowCells = this.viewCells.map((row) => row[0]);
       for (let i = 1, len = rowCells.length - 1; i < len; i++) {
         if (
@@ -1711,7 +1909,7 @@ export class Panel {
         }
       }
     } else if (this.inScrollXBarArea(eventX, eventY)) {
-      console.log('scrollx');
+      // console.log('scrollx');
       if (this.inThumbAreaOfScrollBarX(eventX, eventY, true)) {
         this.state.isSelectScrollXThumb = true;
       } else if (
@@ -1730,7 +1928,7 @@ export class Panel {
         this.drawRuler(this.ctx);
       }
     } else if (this.inScrollYBarArea(eventX, eventY)) {
-      console.log('scrolly');
+      // console.log('scrolly');
       if (this.inThumbAreaOfScrollBarY(eventX, eventY, true)) {
         this.state.isSelectScrollYThumb = true;
       } else if (
@@ -2583,7 +2781,7 @@ export class Panel {
   }
 
   onMouseUp = (event: MouseEvent) => {
-    event.preventDefault();
+    // event.preventDefault();
     // console.log('onmouseup');
     this.state.isSelectCell = false;
     this.state.isSelectScrollYThumb = false;
@@ -3493,7 +3691,7 @@ export class Panel {
 
   onKeyPress(event: KeyboardEvent) {
     // console.log('keypress', event);
-    event.preventDefault();
+    // event.preventDefault();
     if (!event.ctrlKey) {
       this.resetCellPerspective(
         this.cells[this.activeCellPos.row][this.activeCellPos.column]
@@ -3690,6 +3888,17 @@ export class Panel {
       }
 
       this.activeArr[m] = { rowStart, rowEnd, columnStart, columnEnd };
+    }
+    if (
+      this.activeArr.find(
+        (range) =>
+          (inRange(range.rowStart, clipRowStart, clipRowEnd, true) ||
+            inRange(range.rowEnd, clipRowStart, clipRowEnd, true)) &&
+          (inRange(range.columnStart, clipColumnStart, clipColumnEnd, true) ||
+            inRange(range.columnEnd, clipColumnStart, clipColumnEnd, true))
+      )
+    ) {
+      this.clipBoard = null;
     }
 
     this.resetCellPerspective(this.activeCell);
@@ -3955,6 +4164,8 @@ export class Panel {
     }
   }
 
+  changeCellTextStyle(style: CellStyle, text: string) {}
+
   changeCellStyle(style: CellStyle) {
     for (let index = 0, len = this.activeArr.length; index < len; index++) {
       const range = this.activeArr[index];
@@ -4003,6 +4214,48 @@ export class Panel {
         ) {
           // this.cells[i][j].style.fontWeight = fontWeight;
           Object.assign(this.cells[i][j].style, style);
+          if (this.cells[i][j].content.html) {
+            if (style.fontSize) {
+              this.cells[i][j].content.html = this.cells[i][
+                j
+              ].content.html.replace(
+                /font-size:\s*.*;/gi,
+                `font-size: ${style.fontSize}pt;`
+              );
+            }
+            if (style.fontFamily) {
+              this.cells[i][j].content.html = this.cells[i][
+                j
+              ].content.html.replace(
+                /font-family:\s*.*;/gi,
+                `font-family: ${style.fontFamily};`
+              );
+            }
+            if (style.fontWeight) {
+              this.cells[i][j].content.html = this.cells[i][
+                j
+              ].content.html.replace(
+                /font-weight:\s*.*;/gi,
+                `font-weight: ${style.fontWeight};`
+              );
+            }
+            if (style.fontStyle) {
+              this.cells[i][j].content.html = this.cells[i][
+                j
+              ].content.html.replace(
+                /font-style:\s*.*;/gi,
+                `font-style: ${style.fontStyle};`
+              );
+            }
+            if (style.color) {
+              this.cells[i][j].content.html = this.cells[i][
+                j
+              ].content.html.replace(
+                /color:\s*.*;/gi,
+                `font-style: ${style.color};`
+              );
+            }
+          }
         }
       }
     }
@@ -4011,7 +4264,7 @@ export class Panel {
   }
 
   onPaste = (event) => {
-    console.log('document paste');
+    // console.log('document paste');
     if (this.clipBoard) {
       this.clipBoard = null;
       return false;
@@ -4019,8 +4272,8 @@ export class Panel {
     const fragment = this.htmlToElement(
       event.clipboardData.getData('text/html')
     );
-    console.log(fragment);
-    console.log(event.clipboardData);
+    // console.log(fragment);
+    // console.log(event.clipboardData);
     if (fragment.querySelector('table')) {
       const trArr = fragment.querySelectorAll('table tr');
       const style = fragment.querySelector('style').innerHTML;
@@ -4094,7 +4347,7 @@ export class Panel {
           clipCells[i][j] = cell;
         }
       }
-      console.log(clipCells);
+      // console.log(clipCells);
       const [clipRowStart, clipRowEnd, clipColumnStart, clipColumnEnd] = [
         0,
         clipCells.length - 1,
