@@ -4,7 +4,7 @@
 [Demo](https://yuhuali.github.io/report-editor)
 
 ## Preview
-
+[img][https://github.com/YuhuaLi/report-editor/blob/gh-pages/%E6%8D%95%E8%8E%B7.PNG?raw=true]
 
 ## Completed
 
