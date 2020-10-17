@@ -33,10 +33,15 @@ export class CellEditComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('editArea') editArea: ElementRef;
   html: any;
 
-  constructor(private sanitizer: DomSanitizer, private cdr: ChangeDetectorRef) {}
+  constructor(
+    private sanitizer: DomSanitizer,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
-    this.html = this.safeHtml(this.editingCell.content.html || this.editingCell.content.value);
+    this.html = this.safeHtml(
+      this.editingCell.content.html || this.editingCell.content.value
+    );
   }
 
   ngAfterViewInit() {
@@ -49,6 +54,15 @@ export class CellEditComponent implements OnInit, AfterViewInit, OnDestroy {
 
   onpaste(event) {
     console.log('paste', event);
+  }
+
+  onInput(event) {
+    if (this.editingCell) {
+      this.editingCell.content.value = event.target.textContent.replace(
+        /&nbsp;/g,
+        ' '
+      );
+    }
   }
 
   ngOnDestroy() {

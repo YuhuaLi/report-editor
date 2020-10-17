@@ -233,16 +233,15 @@ export class EditorPanelComponent
       const textLen = obj.text.length;
       if (curIndex <= index && curIndex + obj.text.length > index) {
         if (del.length < obj.text.length) {
-          obj.node.textContent = obj.node.textContent
-            .replace(del, '')
-            .replace(/ /g, '&nbsp;');
+          obj.node.textContent = obj.node.textContent.replace(del, '');
         } else {
           if (curIndex === index) {
             obj.node.parentNode.removeChild(obj.node);
           } else {
-            obj.node.textContent = obj.node.textContent
-              .substring(curIndex, index)
-              .replace(/ /g, '&nbsp;');
+            obj.node.textContent = obj.node.textContent.substring(
+              curIndex,
+              index
+            );
           }
           del = del.substring(textLen - index + curIndex);
           index += textLen - index + curIndex;
@@ -303,7 +302,7 @@ export class EditorPanelComponent
           if (diff.length <= obj.text.length) {
             const charArr = obj.node.textContent.split('');
             charArr.splice(index - curIndex, diff.length, ...diff);
-            obj.node.textContent = charArr.join('').replace(/ /g, '&nbsp;');
+            obj.node.textContent = charArr.join('');
             break;
           } else {
             const charArr = obj.node.textContent.split('');
@@ -312,7 +311,7 @@ export class EditorPanelComponent
               obj.text.length,
               ...diff.substring(0, obj.text.length - index + curIndex)
             );
-            obj.node.textContent = charArr.join('').replace(/ /g, '&nbsp;');
+            obj.node.textContent = charArr.join('');
             diff = diff.substring(obj.text.length - index + curIndex);
             index += obj.text.length - index + curIndex;
           }
@@ -335,16 +334,15 @@ export class EditorPanelComponent
         const textLen = obj.text.length;
         if (curIndex <= index && curIndex + obj.text.length > index) {
           if (del.length < obj.text.length) {
-            obj.node.textContent = obj.node.textContent
-              .replace(del, '')
-              .replace(/ /g, '&nbsp;');
+            obj.node.textContent = obj.node.textContent.replace(del, '');
           } else {
             if (curIndex === index) {
               obj.node.parentNode.removeChild(obj.node);
             } else {
-              obj.node.textContent = obj.node.textContent
-                .substring(curIndex, index)
-                .replace(/ /g, '&nbsp;');
+              obj.node.textContent = obj.node.textContent.substring(
+                curIndex,
+                index
+              );
             }
             del = del.substring(textLen - index + curIndex);
             index += textLen - index + curIndex;
@@ -360,11 +358,10 @@ export class EditorPanelComponent
       for (const obj of textObj) {
         const textLen = obj.text.length;
         if (curIndex <= index && curIndex + obj.text.length > index) {
-          obj.node.textContent = (
+          obj.node.textContent =
             obj.node.textContent.substring(0, index - curIndex) +
             add +
-            obj.node.textContent.substring(index - curIndex)
-          ).replace(/ /g, '&nbsp;');
+            obj.node.textContent.substring(index - curIndex);
           break;
         }
         curIndex += textLen;

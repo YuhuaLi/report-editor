@@ -87,7 +87,8 @@
       position: absolute;
       box-sizing: border-box;
       pointer-events: auto;
-      white-space: nowrap;
+      // white-space: nowrap;
+      white-space:pre-wrap;
       overflow: hidden;
       // border: 2px solid #096;
       border: none;

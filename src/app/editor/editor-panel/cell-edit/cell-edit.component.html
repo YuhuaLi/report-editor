@@ -23,9 +23,7 @@
       (editingCell?.height - 2 * editingCell?.style.borderWidth) * multiple
   }"
   [innerHTML]="html"
-  (input)="
-    editingCell && (editingCell.content.value = $event.target.textContent)
-  "
+  (input)="onInput($event)"
   (keydown)="onkeydown.emit($event)"
   (paste)="onpaste($event)"
 ></div>
