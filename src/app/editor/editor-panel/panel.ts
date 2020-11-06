@@ -8,8 +8,6 @@ import {
 } from 'src/app/core/model';
 import { inRange } from 'src/app/core/utils/function';
 import { FloatElement } from 'src/app/core/model/float-element';
-import { element } from 'protractor';
-import { throttle } from 'src/app/core/decorator/throttle.decorator';
 import { LogicPosition } from 'src/app/core/model/logic-position.enmu';
 
 export class Panel {
@@ -97,11 +95,6 @@ export class Panel {
   });
 
   init() {
-    this.ctx = this.canvas.getContext('2d');
-    this.actionCtx = this.actionCanvas.getContext('2d');
-    this.animationCtx = this.animationCanvas.getContext('2d');
-    this.floatCtx = this.floatCanvas.getContext('2d');
-    this.floatActionCtx = this.floatActionCanvas.getContext('2d');
     this.resize();
     this.activeCellPos = { row: 1, column: 1, rangeIndex: 0 };
     this.activeArr = [{ rowStart: 1, columnStart: 1, rowEnd: 1, columnEnd: 1 }];
@@ -114,24 +107,42 @@ export class Panel {
   resize() {
     this.offsetWidth = this.canvas.offsetWidth;
     this.offsetHeight = this.canvas.offsetHeight;
-    this.canvas.width = this.offsetWidth;
-    this.canvas.height = this.offsetHeight;
-    this.actionCanvas.width = this.offsetWidth;
-    this.actionCanvas.height = this.offsetHeight;
-    this.animationCanvas.width = this.offsetWidth;
-    this.animationCanvas.height = this.offsetHeight;
-    this.floatCanvas.width = this.offsetWidth;
-    this.floatCanvas.height = this.offsetHeight;
-    this.floatActionCanvas.width = this.offsetWidth;
-    this.floatActionCanvas.height = this.offsetHeight;
+
+    const dpr = window.devicePixelRatio;
+    this.canvas.width = this.offsetWidth * dpr;
+    this.canvas.height = this.offsetHeight * dpr;
+    this.actionCanvas.width = this.offsetWidth * dpr;
+    this.actionCanvas.height = this.offsetHeight * dpr;
+    this.animationCanvas.width = this.offsetWidth * dpr;
+    this.animationCanvas.height = this.offsetHeight * dpr;
+    this.floatCanvas.width = this.offsetWidth * dpr;
+    this.floatCanvas.height = this.offsetHeight * dpr;
+    this.floatActionCanvas.width = this.offsetWidth * dpr;
+    this.floatActionCanvas.height = this.offsetHeight * dpr;
     this.offscreenCanvas = document.createElement('canvas');
-    this.offscreenCanvas.width = this.offsetWidth;
-    this.offscreenCanvas.height = this.offsetHeight;
+    this.offscreenCanvas.width = this.offsetWidth * dpr;
+    this.offscreenCanvas.height = this.offsetHeight * dpr;
+
+    this.ctx = this.canvas.getContext('2d');
+    this.actionCtx = this.actionCanvas.getContext('2d');
+    this.animationCtx = this.animationCanvas.getContext('2d');
+    this.floatCtx = this.floatCanvas.getContext('2d');
+    this.floatActionCtx = this.floatActionCanvas.getContext('2d');
+    this.offscreenCtx = this.offscreenCanvas.getContext('2d');
+
+    this.ctx.scale(dpr, dpr);
+    this.actionCtx.scale(dpr, dpr);
+    this.animationCtx.scale(dpr, dpr);
+    this.floatCtx.scale(dpr, dpr);
+    this.offscreenCtx.scale(dpr, dpr);
+    this.floatActionCtx.scale(dpr, dpr);
+
     this.width = this.offsetWidth / this.multiple;
     this.height = this.offsetHeight / this.multiple;
     this.clientWidth = this.width - this.offsetLeft - this.style.scrollBarWidth;
     this.clientHeight =
       this.height - this.offsetTop - this.style.scrollBarWidth;
+
     this.viewRowCount =
       Math.ceil((this.height - this.offsetTop) / this.style.cellHeight) + 2;
     if (this.viewCells.length < this.viewRowCount) {
@@ -153,8 +164,6 @@ export class Panel {
       this.cells[this.cells.length - 1][0].y +
       this.cells[this.cells.length - 1][0].height -
       this.offsetTop;
-
-    this.offscreenCtx = this.offscreenCanvas.getContext('2d');
 
     this.setTransform();
   }
@@ -854,8 +863,6 @@ export class Panel {
       // console.log(this.htmlToElement(html).childNodes);
       // console.log(this.parseNode(this.htmlToElement(html)));
       const textArr = this.parseNode(this.htmlToElement(html));
-      const hasBold = !!textArr.find((text) => text.fontWeight === 'bold');
-      const allHasItalic = textArr.every((text) => text.fontStyle === 'italic');
       const textMetricsArr = [];
       for (const textObj of textArr) {
         cellCtx.save();
@@ -869,15 +876,10 @@ export class Panel {
       }
       const maxTextHeight = Math.max(
         ...textMetricsArr.map(
-          (metrics) =>
+          (metrics, index) =>
             metrics.actualBoundingBoxAscent +
-              metrics.actualBoundingBoxDescent || cell.style.fontSize * 1.5
+              metrics.actualBoundingBoxDescent || textArr[index].fontSize / 0.75
         )
-      );
-      const maxTextHeightMetrics = textMetricsArr.find(
-        (metrics) =>
-          (metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent ||
-            cell.style.fontSize * 1.5) === maxTextHeight
       );
 
       const totalTextWidth = textMetricsArr
@@ -908,26 +910,7 @@ export class Panel {
               .reduce((acc, cur) => acc + cur, 0) +
             textMetricsArr[index].width / 2 +
             0.5;
-          // const textHeight =
-          //   textMetricsArr[index].actualBoundingBoxAscent +
-          //     textMetricsArr[index].actualBoundingBoxDescent ||
-          //   cell.style.fontSize * 1.5;
-          // textY =
-          //   y +
-          //   height / 2 +
-          //   maxTextHeight / 2 -
-          //   textHeight / 2 +
-          //   ((textMetricsArr[index].actualBoundingBoxAscent || 0) -
-          //     (textMetricsArr[index].actualBoundingBoxDescent || 0)) /
-          //     2 +
-          //   0.5;
-          textY =
-            y +
-            height / 2 +
-            ((maxTextHeightMetrics.actualBoundingBoxAscent || 0) -
-              (maxTextHeightMetrics.actualBoundingBoxDescent || 0)) /
-              2 +
-            0.5;
+          textY = y + height / 2 + maxTextHeight / 2 + 0.5;
         } else if (cell.style.textAlign === this.style.cellTextAlignLeft) {
           textX =
             x +
@@ -937,26 +920,7 @@ export class Panel {
               .map((metrics) => metrics.width)
               .reduce((acc, cur) => acc + cur, 0) +
             0.5;
-          // const textHeight =
-          //   textMetricsArr[index].actualBoundingBoxAscent +
-          //     textMetricsArr[index].actualBoundingBoxDescent ||
-          //   cell.style.fontSize;
-          // textY =
-          //   y +
-          //   height / 2 +
-          //   maxTextHeight / 2 -
-          //   textHeight / 2 +
-          //   ((textMetricsArr[index].actualBoundingBoxAscent || 0) -
-          //     (textMetricsArr[index].actualBoundingBoxDescent || 0)) /
-          //     2 +
-          //   0.5;
-          textY =
-            y +
-            height / 2 +
-            ((maxTextHeightMetrics.actualBoundingBoxAscent || 0) -
-              (maxTextHeightMetrics.actualBoundingBoxDescent || 0)) /
-              2 +
-            0.5;
+          textY = y + height / 2 + maxTextHeight / 2 + 0.5;
         } else if (cell.style.textAlign === this.style.cellTextAlignRight) {
           textX =
             x +
@@ -967,29 +931,13 @@ export class Panel {
               .map((metrics) => metrics.width)
               .reduce((acc, cur) => acc + cur, 0) +
             0.5;
-          // const textHeight =
-          //   textMetricsArr[index].actualBoundingBoxAscent +
-          //     textMetricsArr[index].actualBoundingBoxDescent ||
-          //   cell.style.fontSize;
-          // textY =
-          //   y +
-          //   height / 2 +
-          //   maxTextHeight / 2 -
-          //   textHeight / 2 +
-          //   ((textMetricsArr[index].actualBoundingBoxAscent || 0) -
-          //     (textMetricsArr[index].actualBoundingBoxDescent || 0)) /
-          //     2 +
-          //   0.5;
-          textY =
-            y +
-            height / 2 +
-            ((maxTextHeightMetrics.actualBoundingBoxAscent || 0) -
-              (maxTextHeightMetrics.actualBoundingBoxDescent || 0)) /
-              2 +
-            0.5;
+          const textHeight =
+            (textMetricsArr[index].actualBoundingBoxAscent || 0) +
+              (textMetricsArr[index].actualBoundingBoxDescent || 0) ||
+            textObj.fontSize * 1.6;
+          textY = y + height / 2 + maxTextHeight / 2 + 0.5;
         }
         cellCtx.fillText(textObj.text, textX, textY);
-
         cellCtx.restore();
       });
     }

@@ -10,7 +10,6 @@ import {
   ViewContainerRef,
 } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
-import { basename } from 'path';
 import { Panel } from './panel';
 
 @Component({
