@@ -1746,29 +1746,58 @@ export class Panel {
           )
         ) {
           if (isDblClick) {
-            const width = this.cells
-              .map((row) => row[i])
-              .reduce((acc, cur) => {
-                if (cur.content.value) {
-                  this.ctx.save();
-                  this.ctx.font = `${cur.style.fontStyle} ${cur.style.fontWeight} ${cur.style.fontSize}pt ${cur.style.fontFamily}`;
-                  if (
-                    this.ctx.measureText(cur.content.value).width +
-                      2 * this.style.cellBorderWidth >
-                    acc
-                  ) {
-                    return (
-                      this.ctx.measureText(cur.content.value).width +
-                      2 * this.style.cellBorderWidth
-                    );
+            const width =
+              this.cells
+                .map((row) => row[i])
+                .reduce((acc, cur) => {
+                  // if (cur.content.value) {
+                  //   this.ctx.save();
+                  //   this.ctx.font = `${cur.style.fontStyle} ${cur.style.fontWeight} ${cur.style.fontSize}pt ${cur.style.fontFamily}`;
+                  //   if (
+                  //     this.ctx.measureText(cur.content.value).width +
+                  //       2 * this.style.cellBorderWidth >
+                  //     acc
+                  //   ) {
+                  //     return (
+                  //       this.ctx.measureText(cur.content.value).width +
+                  //       2 * this.style.cellBorderWidth
+                  //     );
+                  //   }
+                  // }
+                  if (cur.position.row === 0) {
+                    return acc;
                   }
-                }
-                return acc;
-              }, 0);
+                  if (cur.content.html || cur.content.value) {
+                    const html = cur.content.html || cur.content.value;
+                    // console.log(this.htmlToElement(html).childNodes);
+                    // console.log(this.parseNode(this.htmlToElement(html)));
+                    const textArr = this.parseNode(this.htmlToElement(html));
+                    const textMetricsArr = [];
+                    for (const textObj of textArr) {
+                      const cellCtx = this.offscreenCtx;
+                      cellCtx.save();
+                      cellCtx.font = `${
+                        textObj.fontStyle || cur.style.fontStyle
+                      } ${textObj.fontWeight || cur.style.fontWeight} ${
+                        textObj.fontSize || cur.style.fontSize
+                      }pt ${textObj.fontFamily || cur.style.fontFamily}`;
+                      textMetricsArr.push(cellCtx.measureText(textObj.text));
+                      cellCtx.restore();
+                    }
+                    const textWidth = textMetricsArr.reduce(
+                      (w, metric) => w + metric.width,
+                      0
+                    );
+                    if (textWidth > acc) {
+                      return textWidth;
+                    }
+                  }
+                  return acc;
+                }, 0) || Style.cellWidth;
             if (width) {
               this.resizeColumn(
                 this.viewCells[0][i].position.column,
-                width - this.viewCells[0][i].width
+                width + 2 * this.viewCells[0][i].style.borderWidth - this.viewCells[0][i].width
               );
             }
           } else {
@@ -1867,10 +1896,46 @@ export class Panel {
           )
         ) {
           if (isDblClick) {
-            this.resizeRow(
-              rowCells[i].position.row,
-              this.style.cellHeight - rowCells[i].height
-            );
+            const height =
+              this.cells[i].reduce((acc, cur) => {
+                if (cur.position.column === 0) {
+                  return acc;
+                }
+                if (cur.content.html || cur.content.value) {
+                  const html = cur.content.html || cur.content.value;
+                  const textArr = this.parseNode(this.htmlToElement(html));
+                  const textMetricsArr = [];
+                  for (const textObj of textArr) {
+                    const cellCtx = this.offscreenCtx;
+                    cellCtx.save();
+                    cellCtx.font = `${
+                      textObj.fontStyle || cur.style.fontStyle
+                    } ${textObj.fontWeight || cur.style.fontWeight} ${
+                      textObj.fontSize || cur.style.fontSize
+                    }pt ${textObj.fontFamily || cur.style.fontFamily}`;
+                    textMetricsArr.push(cellCtx.measureText(textObj.text));
+                    cellCtx.restore();
+                  }
+                  const maxTextHeight = Math.max(
+                    ...textMetricsArr.map(
+                      (metrics, index) =>
+                        metrics.actualBoundingBoxAscent +
+                          metrics.actualBoundingBoxDescent ||
+                        textArr[index].fontSize / 0.75
+                    )
+                  );
+                  if (maxTextHeight > acc) {
+                    return maxTextHeight;
+                  }
+                }
+                return acc;
+              }, 0) || Style.cellHeight;
+            if (height) {
+              this.resizeRow(
+                rowCells[i].position.row,
+                height + 4 * this.viewCells[0][i].style.borderWidth - rowCells[i].height
+              );
+            }
             break;
           } else {
             this.resizeRowCell = rowCells[i];
