@@ -1797,7 +1797,9 @@ export class Panel {
             if (width) {
               this.resizeColumn(
                 this.viewCells[0][i].position.column,
-                width + 2 * this.viewCells[0][i].style.borderWidth - this.viewCells[0][i].width
+                width +
+                  2 * this.viewCells[0][i].style.borderWidth -
+                  this.viewCells[0][i].width
               );
             }
           } else {
@@ -1933,7 +1935,9 @@ export class Panel {
             if (height) {
               this.resizeRow(
                 rowCells[i].position.row,
-                height + 4 * this.viewCells[0][i].style.borderWidth - rowCells[i].height
+                height +
+                  4 * this.viewCells[0][i].style.borderWidth -
+                  rowCells[i].height
               );
             }
             break;

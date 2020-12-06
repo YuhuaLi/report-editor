@@ -127,11 +127,11 @@ export class EditorPanelComponent
   toggleFontColorPanel(event) {
     // event.preventDefault();
     this.showFontColorPanel = !this.showFontColorPanel;
-    this.state.isCellEdit = true;
+    // this.state.isCellEdit = true;
   }
   toggleBackColorPanel() {
     this.showBackColorPanel = !this.showBackColorPanel;
-    this.state.isCellEdit = true;
+    // this.state.isCellEdit = true;
   }
   changeColor(event) {
     if (this.showFontColorPanel) {
