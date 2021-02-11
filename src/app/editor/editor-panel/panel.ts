@@ -4707,16 +4707,54 @@ export class Panel {
     return null;
   }
 
+  // getViewCellByPoint(pointX: number, pointY: number) {
+  //   for (let rLen = this.viewCells.length, i = rLen - 1; i > 0; i--) {
+  //     for (let cLen = this.viewCells[i].length, j = cLen - 1; j > 0; j--) {
+  //       const cell = this.viewCells[i][j].isCombined
+  //         ? this.viewCells[i][j].combineCell
+  //         : this.viewCells[i][j];
+  //       if (this.inCellArea(pointX, pointY, cell)) {
+  //         return cell;
+  //       }
+  //     }
+  //   }
+  //   return null;
+  // }
+
+  // 优化后根据坐标点寻找单元格方法
   getViewCellByPoint(pointX: number, pointY: number) {
+    let rowIndex: number;
+    let colIndex: number;
     for (let rLen = this.viewCells.length, i = rLen - 1; i > 0; i--) {
-      for (let cLen = this.viewCells[i].length, j = cLen - 1; j > 0; j--) {
-        const cell = this.viewCells[i][j].isCombined
-          ? this.viewCells[i][j].combineCell
-          : this.viewCells[i][j];
-        if (this.inCellArea(pointX, pointY, cell)) {
-          return cell;
+      if (
+        inRange(
+          pointY,
+          this.viewCells[i][0].y  - this.scrollTop,
+          this.viewCells[i][0].y  - this.scrollTop + this.viewCells[i][0].height,
+          true
+        )
+      ) {
+        rowIndex = i;
+        break;
+      }
+    }
+    if (!isNaN(rowIndex)) {
+      for (let cLen = this.viewCells[0].length, i = cLen - 1; i > 0; i--) {
+        if (
+          inRange(
+            pointX,
+            this.viewCells[0][i].x  - this.scrollLeft,
+            this.viewCells[0][i].x  - this.scrollLeft + this.viewCells[0][i].width,
+            true
+          )
+        ) {
+          colIndex = i;
+          break;
         }
       }
+    }
+    if (!isNaN(rowIndex) && !isNaN(colIndex)) {
+      return this.viewCells[rowIndex][colIndex];
     }
     return null;
   }

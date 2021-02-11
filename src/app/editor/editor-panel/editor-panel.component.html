@@ -175,12 +175,27 @@
       {{ fontSize }}
     </option>
   </select>
-  <input
-    type="file"
-    placeholder="insert image"
-    (change)="insertImage($event)"
-    accept="image/*"
-  />
+  <div style="display: inline; position: relative">
+    <input
+      type="file"
+      style="width: 100px; opacity: 0;"
+      placeholder="insert image"
+      (change)="insertImage($event)"
+      accept="image/*"
+    />
+    <input
+      type="button"
+      style="
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 100px;
+        pointer-events: none;
+      "
+      value="插入图片"
+    />
+  </div>
 </div>
 <div class="formula-bar">
   <label class="bar-label">{{ (activeCell && activeCell.index) || "" }}</label
@@ -188,7 +203,7 @@
     #formularInput
     name="formularInput"
     [ngModel]="activeCell?.content.value"
-    (ngModelChange)="refreshEditCellValue($event,formularInput)"
+    (ngModelChange)="refreshEditCellValue($event, formularInput)"
     (mousedown)="onBarInputFocus($event)"
     (selectionchange)="onBarInputKeypress($event)"
     (mouseup)="onBarInputMouseup($event)"
