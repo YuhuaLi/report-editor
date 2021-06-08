@@ -2193,7 +2193,7 @@ export class Panel {
         this.state === OperateState.ResizeColumn ||
         (this.state !== OperateState.SelectRulerX &&
           this.state !== OperateState.SelectRulerY &&
-          this.inRulerXResizeGap(eventX, eventY) )
+          this.inRulerXResizeGap(eventX, eventY))
       ) {
         this.canvas.style.cursor = 'col-resize';
       } else if (
@@ -3632,17 +3632,24 @@ export class Panel {
     posY = posY < this.offsetTop ? this.offsetTop : posY;
     let i = this.activeCellPos.row;
     while (true) {
-      const [y, height] = this.cells[i]
-        ? [
-            this.cells[i][this.activeCellPos.column].y,
-            this.cells[i][this.activeCellPos.column].height,
-          ]
-        : [
-            this.cells[this.cells.length - 1][0].y +
-              this.cells[this.cells.length - 1][0].height +
-              (i - this.cells.length) * this.style.cellHeight,
-            this.style.cellHeight,
-          ];
+      // const [y, height] = this.cells[i]
+      //   ? [
+      //       this.cells[i][this.activeCellPos.column].y,
+      //       this.cells[i][this.activeCellPos.column].height,
+      //     ]
+      //   : [
+      //       this.cells[this.cells.length - 1][0].y +
+      //         this.cells[this.cells.length - 1][0].height +
+      //         (i - this.cells.length) * this.style.cellHeight,
+      //       this.style.cellHeight,
+      //     ];
+      if (!this.cells[i]) {
+        this.createRow(1);
+      }
+      const [y, height] = [
+        this.cells[i][this.activeCellPos.column].y,
+        this.cells[i][this.activeCellPos.column].height,
+      ];
       if (inRange(posY, y, y + height, true)) {
         const cell = this.cells[i][this.activeCellPos.column].isCombined
           ? this.cells[i][this.activeCellPos.column].combineCell
