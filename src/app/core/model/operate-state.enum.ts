@@ -1,0 +1,16 @@
+export enum OperateState {
+  None = 0,
+  EditCell,
+  SelectCell,
+  UnSelectCell,
+  SelectScrollYThumb,
+  SelectScrollXThumb,
+  SelectRulerX,
+  SelectRulerY,
+  UnSelectRulerX,
+  UnSelectRulerY,
+  ResizeColumn,
+  ResizeRow,
+  MoveFloat,
+  ResizeFloat,
+}

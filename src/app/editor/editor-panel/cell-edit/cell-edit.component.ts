@@ -14,6 +14,7 @@ import {
 } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { Cell } from 'src/app/core/model';
+import { OperateState } from '../../../core/model/operate-state.enum';
 
 @Component({
   selector: 'app-cell-edit',
@@ -32,6 +33,7 @@ export class CellEditComponent implements OnInit, AfterViewInit, OnDestroy {
   @Output() afterInit: EventEmitter<any> = new EventEmitter<any>();
   @ViewChild('editArea') editArea: ElementRef;
   html: any;
+  editStatus = OperateState.EditCell;
 
   constructor(
     private sanitizer: DomSanitizer,

@@ -9,6 +9,8 @@ import {
 import { inRange } from 'src/app/core/utils/function';
 import { FloatElement } from 'src/app/core/model/float-element';
 import { LogicPosition } from 'src/app/core/model/logic-position.enmu';
+import { StatusState } from 'src/app/core/model/status-state.enum';
+import { OperateState } from 'src/app/core/model/operate-state.enum';
 
 export class Panel {
   multiple = 1;
@@ -25,12 +27,15 @@ export class Panel {
   cells: Cell[][] = [];
   viewCells: Cell[][] = [];
   editingCell: Cell;
+  resizeFloatPos: LogicPosition;
   // scrollBarWidth = this.style.scrollBarWidth;
-  state: any = {
-    isSelectCell: false,
-    isScrollYThumbHover: false,
-    isSelectScrollYThumb: false,
-  };
+  // state: any = {
+  //   isSelectCell: false,
+  //   isScrollYThumbHover: false,
+  //   isSelectScrollYThumb: false,
+  // };
+  state = OperateState.None;
+  status = StatusState.None;
   isTicking = false;
   scrollLeft = 0;
   scrollTop = 0;
@@ -64,9 +69,9 @@ export class Panel {
   unActiveRange: CellRange;
   resizeColumnCell: Cell;
   resizeRowCell: Cell;
-  clipBoard: { range?: CellRange; isCut: boolean; floatElement?: FloatElement };
+  clipBoard: { range?: CellRange; isCut: boolean; floatElement?: FloatElement }; // 保存复制元素
 
-  floatArr: FloatElement[] = [];
+  floatArr: FloatElement[] = []; // 保存所有悬浮元素
 
   canvas: HTMLCanvasElement;
   actionCanvas: HTMLCanvasElement;
@@ -319,7 +324,7 @@ export class Panel {
             ? this.generateRowNum(rk)
             : isXRuler && !isYRuler
             ? this.generateColumnNum(ck)
-            : null, //this.generateColumnNum(ck) + this.generateRowNum(rk)
+            : null, // this.generateColumnNum(ck) + this.generateRowNum(rk)
         previousValue: null,
         previouseHtml: null,
       },
@@ -416,7 +421,9 @@ export class Panel {
       this.height - this.style.scrollBarWidth
     );
     ctx.fillStyle =
-      this.state.isScrollXThumbHover || this.state.isSelectScrollXThumb
+      // this.state.isScrollXThumbHover || this.state.isSelectScrollXThumb
+      this.status === StatusState.ScrollXThumbHover ||
+      this.state === OperateState.SelectScrollXThumb
         ? this.style.scrollBarThumbActiveColor
         : this.style.scrollBarThumbColor;
 
@@ -454,7 +461,9 @@ export class Panel {
     );
 
     ctx.fillStyle =
-      this.state.isScrollYThumbHover || this.state.isSelectScrollYThumb
+      // this.state.isScrollYThumbHover || this.state.isSelectScrollYThumb
+      this.status === StatusState.ScrollYThumbHover ||
+      this.state === OperateState.SelectScrollYThumb
         ? this.style.scrollBarThumbActiveColor
         : this.style.scrollBarThumbColor;
 
@@ -547,7 +556,8 @@ export class Panel {
         cellCtx.textBaseline = columns[i].style
           .textBaseline as CanvasTextBaseline;
         cellCtx.strokeStyle = this.style.rulerCellBorderColor;
-        cellCtx.font = ctx.font = `${columns[i].style.fontStyle} ${columns[i].style.fontWeight} ${columns[i].style.fontSize}pt ${columns[i].style.fontFamily}`;
+        cellCtx.font =
+          ctx.font = `${columns[i].style.fontStyle} ${columns[i].style.fontWeight} ${columns[i].style.fontSize}pt ${columns[i].style.fontFamily}`;
         cellCtx.fillStyle = columns[i].style.background;
       } else {
         cellCtx = ctx;
@@ -618,7 +628,8 @@ export class Panel {
       cellCtx.textAlign = rows[i].style.textAlign as CanvasTextAlign;
       cellCtx.textBaseline = rows[i].style.textBaseline as CanvasTextBaseline;
       cellCtx.strokeStyle = this.style.rulerCellBorderColor;
-      cellCtx.font = ctx.font = `${rows[i].style.fontStyle} ${rows[i].style.fontWeight} ${rows[i].style.fontSize}pt ${rows[i].style.fontFamily}`;
+      cellCtx.font =
+        ctx.font = `${rows[i].style.fontStyle} ${rows[i].style.fontWeight} ${rows[i].style.fontSize}pt ${rows[i].style.fontFamily}`;
       // if (
       //   this.activeArr.length &&
       //   this.activeArr.find((range) =>
@@ -1116,7 +1127,8 @@ export class Panel {
           });
           this.cells.forEach((row, index) => {
             if (index && inRange(index, rowStart, rowEnd, true)) {
-              row[0].style.background = this.style.activeRulerCellBacgroundColor;
+              row[0].style.background =
+                this.style.activeRulerCellBacgroundColor;
             }
           });
 
@@ -1619,7 +1631,8 @@ export class Panel {
     this.canvas.focus();
     // console.log('mousedown', event);
 
-    if (this.state.isCellEdit || this.editingCell) {
+    // if (this.state.isCellEdit || this.editingCell) {
+    if (this.state === OperateState.EditCell || this.editingCell) {
       this.editCellCompelte();
     }
 
@@ -1686,7 +1699,8 @@ export class Panel {
                 )
             ) && event.ctrlKey;
           if (isUnActive) {
-            this.state.unSelectRulerX = true;
+            // this.state.unSelectRulerX = true;
+            this.state = OperateState.UnSelectRulerX;
             this.unActiveRange = {
               rowStart: 1,
               rowEnd: Infinity,
@@ -1694,7 +1708,8 @@ export class Panel {
               columnEnd: this.viewCells[0][i].position.column,
             };
           } else {
-            this.state.isSelectRulerX = true;
+            // this.state.isSelectRulerX = true;
+            this.state = OperateState.SelectRulerX;
             this.activeArr.push({
               rowStart: 1,
               rowEnd: Infinity,
@@ -1804,7 +1819,8 @@ export class Panel {
             }
           } else {
             this.resizeColumnCell = this.viewCells[0][i];
-            this.state.isResizeColumn = true;
+            // this.state.isResizeColumn = true;
+            this.state = OperateState.ResizeColumn;
           }
           break;
         }
@@ -1841,7 +1857,8 @@ export class Panel {
                 )
             ) && event.ctrlKey;
           if (isUnActive) {
-            this.state.unSelectRulerY = true;
+            // this.state.unSelectRulerY = true;
+            this.state = OperateState.UnSelectRulerY;
             this.unActiveRange = {
               rowStart: rowCells[i].position.row,
               rowEnd: rowCells[i].position.row,
@@ -1849,7 +1866,8 @@ export class Panel {
               columnEnd: Infinity,
             };
           } else {
-            this.state.isSelectRulerY = true;
+            // this.state.isSelectRulerY = true;
+            this.state = OperateState.SelectRulerY;
             this.activeArr.push({
               rowStart: event.shiftKey
                 ? this.activeArr.length &&
@@ -1943,7 +1961,8 @@ export class Panel {
             break;
           } else {
             this.resizeRowCell = rowCells[i];
-            this.state.isResizeRow = true;
+            // this.state.isResizeRow = true;
+            this.state = OperateState.ResizeRow;
             break;
           }
         }
@@ -1951,7 +1970,8 @@ export class Panel {
     } else if (this.inScrollXBarArea(eventX, eventY)) {
       // console.log('scrollx');
       if (this.inThumbAreaOfScrollBarX(eventX, eventY, true)) {
-        this.state.isSelectScrollXThumb = true;
+        // this.state.isSelectScrollXThumb = true;
+        this.state = OperateState.SelectScrollXThumb;
       } else if (
         inRange(
           eventX,
@@ -1970,7 +1990,8 @@ export class Panel {
     } else if (this.inScrollYBarArea(eventX, eventY)) {
       // console.log('scrolly');
       if (this.inThumbAreaOfScrollBarY(eventX, eventY, true)) {
-        this.state.isSelectScrollYThumb = true;
+        // this.state.isSelectScrollYThumb = true;
+        this.state = OperateState.SelectScrollYThumb;
       } else if (
         inRange(
           eventY,
@@ -2005,10 +2026,13 @@ export class Panel {
           floatElemntResizePos !== LogicPosition.Other &&
           floatElement.isActive
         ) {
-          this.state.isResizeFloat = true;
-          this.state.resizeFloatPos = floatElemntResizePos;
+          // this.state.isResizeFloat = true;
+          this.state = OperateState.ResizeFloat;
+          // this.state.resizeFloatPos = floatElemntResizePos;
+          this.resizeFloatPos = floatElemntResizePos;
         } else {
-          this.state.isMoveFloat = true;
+          // this.state.isMoveFloat = true;
+          this.state = OperateState.MoveFloat;
           floatElement.moveOrigin = {
             x: eventX + this.scrollLeft - floatElement.x,
             y: eventY + this.scrollTop - floatElement.y,
@@ -2044,7 +2068,8 @@ export class Panel {
               )
           ) && event.ctrlKey;
         if (isUnActive) {
-          this.state.unSelectCell = true;
+          // this.state.unSelectCell = true;
+          this.state = OperateState.UnSelectCell;
           this.unActiveRange = {
             rowStart: cell.position.row,
             rowEnd: cell.position.row + cell.rowSpan - 1,
@@ -2064,9 +2089,12 @@ export class Panel {
             this.resetCellPerspective(cell);
             this.clipBoard = null;
             this.editingCell = cell;
-            this.editingCell.content.previousValue = this.editingCell.content.value;
-            this.editingCell.content.previousHtml = this.editingCell.content.html;
-            this.state.isCellEdit = true;
+            this.editingCell.content.previousValue =
+              this.editingCell.content.value;
+            this.editingCell.content.previousHtml =
+              this.editingCell.content.html;
+            // this.state.isCellEdit = true;
+            this.state = OperateState.EditCell;
             this.activeArr = [
               {
                 rowStart: cell.position.row,
@@ -2077,7 +2105,8 @@ export class Panel {
             ];
             this.activeCellPos.rangeIndex = 0;
           } else {
-            this.state.isSelectCell = true;
+            // this.state.isSelectCell = true;
+            this.state = OperateState.SelectCell;
             if (event.shiftKey) {
               const range = {
                 rowStart: this.activeCellPos.row,
@@ -2139,37 +2168,57 @@ export class Panel {
 
   // 设置鼠标cursor样式
   setMouseCursor(eventX, eventY) {
+    // if (
+    //   (!this.inCellsArea(eventX, eventY) && !this.state.isSelectCell) ||
+    //   this.state.isSelectScrollYThumb ||
+    //   this.state.isSelectScrollXThumb ||
+    //   this.state.isResizeColumn ||
+    //   this.state.isResizeRow
+    // ) {
     if (
-      (!this.inCellsArea(eventX, eventY) && !this.state.isSelectCell) ||
-      this.state.isSelectScrollYThumb ||
-      this.state.isSelectScrollXThumb ||
-      this.state.isResizeColumn ||
-      this.state.isResizeRow
+      (!this.inCellsArea(eventX, eventY) &&
+        this.state !== OperateState.SelectCell) ||
+      this.state === OperateState.SelectScrollYThumb ||
+      this.state === OperateState.SelectScrollXThumb ||
+      this.state === OperateState.ResizeColumn ||
+      this.state === OperateState.ResizeRow
     ) {
+      // if (
+      //   this.state.isResizeColumn ||
+      //   (!this.state.isSelectRulerX &&
+      //     !this.state.isSelectRulerY &&
+      //     this.inRulerXResizeGap(eventX, eventY))
+      // ) {
       if (
-        this.state.isResizeColumn ||
-        (!this.state.isSelectRulerX &&
-          !this.state.isSelectRulerY &&
-          this.inRulerXResizeGap(eventX, eventY))
+        this.state === OperateState.ResizeColumn ||
+        (this.state !== OperateState.SelectRulerX &&
+          this.state !== OperateState.SelectRulerY &&
+          this.inRulerXResizeGap(eventX, eventY) )
       ) {
         this.canvas.style.cursor = 'col-resize';
       } else if (
-        this.state.isResizeRow ||
-        (!this.state.isSelectRulerX &&
-          !this.state.isSelectRulerY &&
+        // this.state.isResizeRow ||
+        // (!this.state.isSelectRulerX &&
+        //   !this.state.isSelectRulerY &&
+        //   this.inRulerYResizeGap(eventX, eventY))
+        this.state === OperateState.ResizeRow ||
+        (this.state !== OperateState.SelectRulerX &&
+          this.state !== OperateState.SelectRulerY &&
           this.inRulerYResizeGap(eventX, eventY))
       ) {
         this.canvas.style.cursor = 'row-resize';
       } else {
         this.canvas.style.cursor = 'default';
       }
-    } else if (this.state.isMoveFloat) {
+      // } else if (this.state.isMoveFloat) {
+    } else if (this.state === OperateState.MoveFloat) {
       this.canvas.style.cursor = 'move';
     } else {
       const floatElement = this.getViewFloatElementByPoint(eventX, eventY);
-      if (floatElement || this.state.isResizeFloat) {
+      // if (floatElement || this.state.isResizeFloat) {
+      if (floatElement || this.state === OperateState.ResizeFloat) {
         const pos =
-          this.state.resizeFloatPos ||
+          this.resizeFloatPos ||
           this.getFloatElementResizePos(floatElement, eventX, eventY);
         switch (pos) {
           case LogicPosition.LeftTop:
@@ -2205,65 +2254,126 @@ export class Panel {
     const eventX = (event.offsetX || event.layerX || 0) / this.multiple; // 兼容火狐读offetX，offsetY一直为0问题
     const eventY = (event.offsetY || event.layerY || 0) / this.multiple;
     this.setMouseCursor(eventX, eventY);
-    const preIsScrollXThumbHover = this.state.isScrollXThumbHover;
-    const preIsScrollYThumbHover = this.state.isScrollYThumbHover;
-    this.state.isScrollXThumbHover = this.inThumbAreaOfScrollBarX(
-      eventX,
-      eventY
-    );
-    this.state.isScrollYThumbHover = this.inThumbAreaOfScrollBarY(
-      eventX,
-      eventY
-    );
-    if (
-      (preIsScrollXThumbHover !== this.state.isScrollXThumbHover &&
-        !this.state.isSelectScrollXThumb) ||
-      (preIsScrollYThumbHover !== this.state.isScrollYThumbHover &&
-        !this.state.isSelectScrollYThumb)
+    // const preIsScrollXThumbHover = this.state.isScrollXThumbHover;
+    // const preIsScrollYThumbHover = this.state.isScrollYThumbHover;
+
+    // this.state.isScrollXThumbHover = this.inThumbAreaOfScrollBarX(
+    //   eventX,
+    //   eventY
+    // );
+    // this.state.isScrollYThumbHover = this.inThumbAreaOfScrollBarY(
+    //   eventX,
+    //   eventY
+    // );
+    let scrollBarNeedDraw = false;
+    if (this.inThumbAreaOfScrollBarX(eventX, eventY)) {
+      this.status = StatusState.ScrollXThumbHover;
+      scrollBarNeedDraw = true;
+    } else if (this.inThumbAreaOfScrollBarY(eventX, eventY)) {
+      this.status = StatusState.ScrollYThumbHover;
+      scrollBarNeedDraw = true;
+    } else if (
+      this.status === StatusState.ScrollXThumbHover ||
+      this.status === StatusState.ScrollYThumbHover
     ) {
+      this.status = StatusState.None;
+      scrollBarNeedDraw = true;
+    }
+    // if (
+    //   (preIsScrollXThumbHover !== this.state.isScrollXThumbHover &&
+    //     !this.state.isSelectScrollXThumb) ||
+    //   (preIsScrollYThumbHover !== this.state.isScrollYThumbHover &&
+    //     !this.state.isSelectScrollYThumb)
+    // ) {
+    if (scrollBarNeedDraw) {
       this.drawScrollBar(this.ctx);
     }
 
     // if (!this.isTicking) {
     //   requestAnimationFrame(() => {
-    if (this.state.isMoveFloat) {
+    // if (this.state.isMoveFloat) {
+    if (this.state === OperateState.MoveFloat) {
       this.moveFloat(eventX, eventY);
-    } else if (this.state.isResizeFloat) {
+      // } else if (this.state.isResizeFloat) {
+    } else if (this.state === OperateState.ResizeFloat) {
       this.resizeFloat(eventX, eventY);
     } else {
       let range;
-      if (this.state.isSelectCell) {
-        range = this.calcActive(eventX, eventY);
-      } else if (this.state.unSelectCell) {
-        range = this.calcUnActive(eventX, eventY);
-      } else if (this.state.isSelectScrollYThumb) {
-        this.calcScrollY(eventX, eventY);
-      } else if (this.state.isSelectScrollXThumb) {
-        this.calcScrollX(eventX, eventY);
-      } else if (this.state.isSelectRulerX) {
-        range = this.calcAcitiveRulerX(eventX, eventY);
-      } else if (this.state.isSelectRulerY) {
-        range = this.calcActiveRulerY(eventX, eventY);
-      } else if (this.state.unSelectRulerX) {
-        range = this.calcUnActiveRulerX(eventX, eventY);
-      } else if (this.state.unSelectRulerY) {
-        range = this.calcUnActiveRulerY(eventX, eventY);
-      } else if (this.state.isResizeColumn) {
-        this.resizeColumn(
-          this.resizeColumnCell.position.column,
-          eventX - this.mousePoint.x
-        );
-      } else if (this.state.isResizeRow) {
-        this.resizeRow(
-          this.resizeRowCell.position.row,
-          eventY - this.mousePoint.y
-        );
+      // if (this.state.isSelectCell) {
+      //   range = this.calcActive(eventX, eventY);
+      // } else if (this.state.unSelectCell) {
+      //   range = this.calcUnActive(eventX, eventY);
+      // } else if (this.state.isSelectScrollYThumb) {
+      //   this.calcScrollY(eventX, eventY);
+      // } else if (this.state.isSelectScrollXThumb) {
+      //   this.calcScrollX(eventX, eventY);
+      // } else if (this.state.isSelectRulerX) {
+      //   range = this.calcAcitiveRulerX(eventX, eventY);
+      // } else if (this.state.isSelectRulerY) {
+      //   range = this.calcActiveRulerY(eventX, eventY);
+      // } else if (this.state.unSelectRulerX) {
+      //   range = this.calcUnActiveRulerX(eventX, eventY);
+      // } else if (this.state.unSelectRulerY) {
+      //   range = this.calcUnActiveRulerY(eventX, eventY);
+      // } else if (this.state.isResizeColumn) {
+      //   this.resizeColumn(
+      //     this.resizeColumnCell.position.column,
+      //     eventX - this.mousePoint.x
+      //   );
+      // } else if (this.state.isResizeRow) {
+      //   this.resizeRow(
+      //     this.resizeRowCell.position.row,
+      //     eventY - this.mousePoint.y
+      //   );
+      // }
+      switch (this.state) {
+        case OperateState.SelectCell:
+          range = this.calcActive(eventX, eventY);
+          break;
+        case OperateState.UnSelectCell:
+          range = this.calcUnActive(eventX, eventY);
+          break;
+        case OperateState.SelectRulerX:
+          range = this.calcAcitiveRulerX(eventX, eventY);
+          break;
+        case OperateState.SelectRulerY:
+          range = this.calcActiveRulerY(eventX, eventY);
+          break;
+        case OperateState.UnSelectRulerX:
+          range = this.calcUnActiveRulerX(eventX, eventY);
+          break;
+        case OperateState.UnSelectRulerY:
+          range = this.calcUnActiveRulerY(eventX, eventY);
+          break;
+        case OperateState.SelectScrollYThumb:
+          this.calcScrollY(eventX, eventY);
+          break;
+        case OperateState.SelectScrollXThumb:
+          this.calcScrollX(eventX, eventY);
+          break;
+        case OperateState.ResizeColumn:
+          this.resizeColumn(
+            this.resizeColumnCell.position.column,
+            eventX - this.mousePoint.x
+          );
+          break;
+        case OperateState.ResizeRow:
+          this.resizeRow(
+            this.resizeRowCell.position.row,
+            eventY - this.mousePoint.y
+          );
+          break;
+        default:
+          break;
       }
       if (range) {
         if (
-          !this.state.unSelectCell &&
-          !this.state.unSelectRulerX &&
-          !this.state.unSelectRulerY
+          // !this.state.unSelectCell &&
+          // !this.state.unSelectRulerX &&
+          // !this.state.unSelectRulerY
+          this.state !== OperateState.UnSelectCell &&
+          this.state !== OperateState.UnSelectRulerX &&
+          this.state !== OperateState.UnSelectRulerY
         ) {
           this.activeArr.push(range);
           this.activeArr.splice(this.activeArr.length - 2, 1);
@@ -2289,7 +2399,7 @@ export class Panel {
   resizeFloat(eventX, eventY) {
     const activeArr = this.floatArr.filter((elem) => elem.isActive);
     for (const floatElem of activeArr) {
-      switch (this.state.resizeFloatPos) {
+      switch (this.resizeFloatPos) {
         case LogicPosition.LeftTop:
           floatElem.x = eventX + this.scrollLeft;
           floatElem.y = eventY + this.scrollTop;
@@ -2399,7 +2509,8 @@ export class Panel {
     if (
       x === this.mousePoint.x &&
       y === this.mousePoint.y &&
-      this.state.isSelectCell
+      // this.state.isSelectCell
+      this.state === OperateState.SelectCell
     ) {
       if (y > this.offsetTop + this.clientHeight || y < this.offsetTop) {
         this.scrollY(
@@ -2427,7 +2538,8 @@ export class Panel {
       }
       this.autoScrollTimeoutID = setTimeout(() => {
         clearTimeout(this.autoScrollTimeoutID);
-        if (this.mousePoint && this.state.isSelectCell) {
+        // if (this.mousePoint && this.state.isSelectCell) {
+        if (this.mousePoint && this.state === OperateState.SelectCell) {
           this.autoScroll(this.mousePoint.x, this.mousePoint.y);
         }
       }, 50);
@@ -2438,7 +2550,8 @@ export class Panel {
       }
       this.autoScrollTimeoutID = setTimeout(() => {
         clearTimeout(this.autoScrollTimeoutID);
-        if (this.mousePoint && this.state.isSelectCell) {
+        // if (this.mousePoint && this.state.isSelectCell) {
+        if (this.mousePoint && this.state === OperateState.SelectCell) {
           this.autoScroll(this.mousePoint.x, this.mousePoint.y);
         }
       }, 50);
@@ -2824,33 +2937,37 @@ export class Panel {
   onMouseUp = (event: MouseEvent) => {
     // event.preventDefault();
     // console.log('onmouseup');
-    this.state.isSelectCell = false;
-    this.state.isSelectScrollYThumb = false;
-    this.state.isSelectScrollXThumb = false;
-    this.state.isSelectRulerX = false;
-    this.state.isSelectRulerY = false;
-    this.state.isResizeColumn = false;
-    this.state.isResizeRow = false;
-    this.state.isMoveFloat = false;
+    // this.state.isSelectCell = false;
+    // this.state.isSelectScrollYThumb = false;
+    // this.state.isSelectScrollXThumb = false;
+    // this.state.isSelectRulerX = false;
+    // this.state.isSelectRulerY = false;
+    // this.state.isResizeColumn = false;
+    // this.state.isResizeRow = false;
+    // this.state.isMoveFloat = false;
+    // this.state.isResizeFloat = false;
     this.resizeColumnCell = null;
     this.resizeRowCell = null;
-    this.state.isResizeFloat = null;
-    this.state.resizeFloatPos = null;
+    this.resizeFloatPos = null;
     // this.mousePoint = null;
     if (
-      this.state.unSelectCell ||
-      this.state.unSelectRulerX ||
-      this.state.unSelectRulerY
+      // this.state.unSelectCell ||
+      // this.state.unSelectRulerX ||
+      // this.state.unSelectRulerY
+      this.state === OperateState.UnSelectCell ||
+      this.state === OperateState.UnSelectRulerX ||
+      this.state === OperateState.UnSelectRulerY
     ) {
       this.reCalcActiveArr();
       this.unActiveRange = null;
-      this.state.unSelectCell = false;
-      this.state.unSelectRulerX = false;
-      this.state.unSelectRulerY = false;
+      // this.state.unSelectCell = false;
+      // this.state.unSelectRulerX = false;
+      // this.state.unSelectRulerY = false;
       this.setActive();
       this.drawScrollBar(this.ctx);
       this.drawRuler(this.ctx);
     }
+    this.state = OperateState.None;
     // console.log(this.activeArr);
     // console.log(this.activeCell);
   };
@@ -3666,11 +3783,11 @@ export class Panel {
           this.cells[this.activeCellPos.row][this.activeCellPos.column]
         );
         this.clipBoard = null;
-        this.editingCell = this.cells[this.activeCellPos.row][
-          this.activeCellPos.column
-        ];
+        this.editingCell =
+          this.cells[this.activeCellPos.row][this.activeCellPos.column];
         this.editingCell.content.value = null;
-        this.state.isCellEdit = true;
+        // this.state.isCellEdit = true;
+        this.state = OperateState.EditCell;
         break;
       case KeyboardCode.KeyA:
         if (event.ctrlKey) {
@@ -3739,12 +3856,12 @@ export class Panel {
         this.cells[this.activeCellPos.row][this.activeCellPos.column]
       );
       this.clipBoard = null;
-      this.editingCell = this.cells[this.activeCellPos.row][
-        this.activeCellPos.column
-      ];
+      this.editingCell =
+        this.cells[this.activeCellPos.row][this.activeCellPos.column];
       this.editingCell.content.value = event.key;
       this.editingCell.content.html = event.key;
-      this.state.isCellEdit = true;
+      // this.state.isCellEdit = true;
+      this.state = OperateState.EditCell;
     }
   }
 
@@ -3960,7 +4077,8 @@ export class Panel {
       this.drawScrollBar(this.ctx);
     }
     this.editingCell = null;
-    this.state.isCellEdit = false;
+    // this.state.isCellEdit = false;
+    this.state = OperateState.None;
     this.refreshView();
     this.canvas.focus();
   }
@@ -4729,8 +4847,8 @@ export class Panel {
       if (
         inRange(
           pointY,
-          this.viewCells[i][0].y  - this.scrollTop,
-          this.viewCells[i][0].y  - this.scrollTop + this.viewCells[i][0].height,
+          this.viewCells[i][0].y - this.scrollTop,
+          this.viewCells[i][0].y - this.scrollTop + this.viewCells[i][0].height,
           true
         )
       ) {
@@ -4743,8 +4861,10 @@ export class Panel {
         if (
           inRange(
             pointX,
-            this.viewCells[0][i].x  - this.scrollLeft,
-            this.viewCells[0][i].x  - this.scrollLeft + this.viewCells[0][i].width,
+            this.viewCells[0][i].x - this.scrollLeft,
+            this.viewCells[0][i].x -
+              this.scrollLeft +
+              this.viewCells[0][i].width,
             true
           )
         ) {
@@ -4754,7 +4874,9 @@ export class Panel {
       }
     }
     if (!isNaN(rowIndex) && !isNaN(colIndex)) {
-      return this.viewCells[rowIndex][colIndex];
+      return this.viewCells[rowIndex][colIndex]?.isCombined
+        ? this.viewCells[rowIndex][colIndex].combineCell
+        : this.viewCells[rowIndex][colIndex];
     }
     return null;
   }

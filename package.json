@@ -8,7 +8,7 @@
     "test": "ng test",
     "lint": "ng lint",
     "e2e": "ng e2e",
-    "myself": "ng serve --host 100.169.42.239 --port 4201"
+    "myself": "ng serve --host 0.0.0.0 --port 4201"
   },
   "private": true,
   "dependencies": {
@@ -40,7 +40,7 @@
     "karma-coverage-istanbul-reporter": "~2.1.0",
     "karma-jasmine": "~3.0.1",
     "karma-jasmine-html-reporter": "^1.4.2",
-    "lodash": "^4.17.15",
+    "lodash": "^4.17.21",
     "protractor": "~5.4.3",
     "ts-node": "~8.3.0",
     "tslint": "~6.1.0",

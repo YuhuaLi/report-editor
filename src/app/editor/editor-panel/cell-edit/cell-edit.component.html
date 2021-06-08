@@ -14,7 +14,7 @@
   <div
     #editArea
     contenteditable="true"
-    [appAutoFocus]="state?.isCellEdit"
+    [appAutoFocus]="state === editStatus"
     name="editCell"
     class="editCell"
     autocomplete="off"
