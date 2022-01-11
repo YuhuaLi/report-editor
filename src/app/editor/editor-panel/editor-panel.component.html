@@ -216,6 +216,9 @@
     autofocus
     #panel
     class="panel"
+    (touchmove)="onMouseMove($event)"
+    (touchstart)="onMouseDown($event)"
+    (touchend)="onMouseUp($event)"
     (mouseover)="onMouseOver($event)"
     (mouseout)="onMouseOut($event)"
     (mouseenter)="onMouseEnter($event)"

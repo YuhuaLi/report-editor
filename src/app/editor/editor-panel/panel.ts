@@ -13,6 +13,7 @@ import { StatusState } from 'src/app/core/model/status-state.enum';
 import { OperateState } from 'src/app/core/model/operate-state.enum';
 
 export class Panel {
+  dpr = window.devicePixelRatio || 1;
   multiple = 1;
   width = 0;
   height = 0;
@@ -113,20 +114,19 @@ export class Panel {
     this.offsetWidth = this.canvas.offsetWidth;
     this.offsetHeight = this.canvas.offsetHeight;
 
-    const dpr = window.devicePixelRatio;
-    this.canvas.width = this.offsetWidth * dpr;
-    this.canvas.height = this.offsetHeight * dpr;
-    this.actionCanvas.width = this.offsetWidth * dpr;
-    this.actionCanvas.height = this.offsetHeight * dpr;
-    this.animationCanvas.width = this.offsetWidth * dpr;
-    this.animationCanvas.height = this.offsetHeight * dpr;
-    this.floatCanvas.width = this.offsetWidth * dpr;
-    this.floatCanvas.height = this.offsetHeight * dpr;
-    this.floatActionCanvas.width = this.offsetWidth * dpr;
-    this.floatActionCanvas.height = this.offsetHeight * dpr;
+    this.canvas.width = this.offsetWidth * this.dpr;
+    this.canvas.height = this.offsetHeight * this.dpr;
+    this.actionCanvas.width = this.offsetWidth * this.dpr;
+    this.actionCanvas.height = this.offsetHeight * this.dpr;
+    this.animationCanvas.width = this.offsetWidth * this.dpr;
+    this.animationCanvas.height = this.offsetHeight * this.dpr;
+    this.floatCanvas.width = this.offsetWidth * this.dpr;
+    this.floatCanvas.height = this.offsetHeight * this.dpr;
+    this.floatActionCanvas.width = this.offsetWidth * this.dpr;
+    this.floatActionCanvas.height = this.offsetHeight * this.dpr;
     this.offscreenCanvas = document.createElement('canvas');
-    this.offscreenCanvas.width = this.offsetWidth * dpr;
-    this.offscreenCanvas.height = this.offsetHeight * dpr;
+    this.offscreenCanvas.width = this.offsetWidth * this.dpr;
+    this.offscreenCanvas.height = this.offsetHeight * this.dpr;
 
     this.ctx = this.canvas.getContext('2d');
     this.actionCtx = this.actionCanvas.getContext('2d');
@@ -135,12 +135,12 @@ export class Panel {
     this.floatActionCtx = this.floatActionCanvas.getContext('2d');
     this.offscreenCtx = this.offscreenCanvas.getContext('2d');
 
-    this.ctx.scale(dpr, dpr);
-    this.actionCtx.scale(dpr, dpr);
-    this.animationCtx.scale(dpr, dpr);
-    this.floatCtx.scale(dpr, dpr);
-    this.offscreenCtx.scale(dpr, dpr);
-    this.floatActionCtx.scale(dpr, dpr);
+    this.ctx.scale(this.dpr, this.dpr);
+    this.actionCtx.scale(this.dpr, this.dpr);
+    this.animationCtx.scale(this.dpr, this.dpr);
+    this.floatCtx.scale(this.dpr, this.dpr);
+    this.offscreenCtx.scale(this.dpr, this.dpr);
+    this.floatActionCtx.scale(this.dpr, this.dpr);
 
     this.width = this.offsetWidth / this.multiple;
     this.height = this.offsetHeight / this.multiple;
@@ -1289,10 +1289,10 @@ export class Panel {
       }
       this.actionCtx.drawImage(
         ctx.canvas,
-        this.offsetLeft * this.multiple,
-        this.offsetTop * this.multiple,
-        this.clientWidth * this.multiple,
-        this.clientHeight * this.multiple,
+        this.offsetLeft * this.multiple * this.dpr,
+        this.offsetTop * this.multiple * this.dpr,
+        this.clientWidth * this.multiple * this.dpr,
+        this.clientHeight * this.multiple * this.dpr,
         this.offsetLeft,
         this.offsetTop,
         this.clientWidth,
@@ -1620,12 +1620,23 @@ export class Panel {
   }
 
   /** 鼠标点下时事件 */
-  onMouseDown(event: MouseEvent) {
+  onMouseDown(event: any) {
+    // console.log('down');
     // this.panel.nativeElement.focus();
     // const eventX = event.offsetX * this.multiple;
     // const eventY = event.offsetY * this.multiple;
-    const eventX = event.offsetX / this.multiple;
-    const eventY = event.offsetY / this.multiple;
+    const eventX =
+      (event.offsetX ||
+        event.layerX ||
+        (event.touches?.length &&
+          event.touches[0].pageX - event.target.getBoundingClientRect().left) ||
+        0) / this.multiple;
+    const eventY =
+      (event.offsetY ||
+        event.layerY ||
+        (event.touches?.length &&
+          event.touches[0].pageY - event.target.getBoundingClientRect().top) ||
+        0) / this.multiple;
     event.preventDefault();
     event.stopPropagation();
     this.canvas.focus();
@@ -2251,9 +2262,20 @@ export class Panel {
   /** 鼠标移动事件 */
   onMouseMove(event: any) {
     // console.log('move');
-    const eventX = (event.offsetX || event.layerX || 0) / this.multiple; // 兼容火狐读offetX，offsetY一直为0问题
-    const eventY = (event.offsetY || event.layerY || 0) / this.multiple;
+    const eventX =
+      (event.offsetX ||
+        event.layerX ||
+        (event.touches?.length &&
+          event.touches[0].pageX - event.target.getBoundingClientRect().left) ||
+        0) / this.multiple; // 兼容火狐读offetX，offsetY一直为0问题
+    const eventY =
+      (event.offsetY ||
+        event.layerY ||
+        (event.touches?.length &&
+          event.touches[0].pageY - event.target.getBoundingClientRect().top) ||
+        0) / this.multiple;
     this.setMouseCursor(eventX, eventY);
+    // console.log(eventX, eventY);
     // const preIsScrollXThumbHover = this.state.isScrollXThumbHover;
     // const preIsScrollYThumbHover = this.state.isScrollYThumbHover;
 
@@ -2469,7 +2491,7 @@ export class Panel {
         floatElem.x < this.offsetLeft ? this.offsetLeft : floatElem.x;
       floatElem.y = floatElem.y < this.offsetTop ? this.offsetTop : floatElem.y;
     }
-
+    // console.log(eventX, eventY, activeArr);
     this.refreshView();
   }
 
@@ -2935,6 +2957,7 @@ export class Panel {
   }
 
   onMouseUp = (event: MouseEvent) => {
+    // console.log('up');
     // event.preventDefault();
     // console.log('onmouseup');
     // this.state.isSelectCell = false;
@@ -4791,37 +4814,39 @@ export class Panel {
   }
 
   getViewFloatElementByPoint(pointX: number, pointY: number) {
-    for (let i = this.floatArr.length - 1; i >= 0; i--) {
-      const x = this.floatArr[i].x;
-      const y = this.floatArr[i].y;
-      const width = this.floatArr[i].width;
-      const height = this.floatArr[i].height;
-      const isActive = this.floatArr[i].isActive;
+    const floatArr = this.filterOffscreenFloat(this.floatArr);
+    for (let i = floatArr.length - 1; i >= 0; i--) {
+      const x = floatArr[i].x;
+      const y = floatArr[i].y;
+      const width = floatArr[i].width;
+      const height = floatArr[i].height;
+      // const isActive = floatArr[i].isActive;
       const radius = this.style.activeFloatElementResizeArcRadius;
-      if (
-        !inRange(
-          x - this.scrollLeft - radius,
-          this.offsetLeft,
-          this.offsetLeft + this.clientWidth
-        ) &&
-        !inRange(
-          x + width - this.scrollLeft + radius,
-          this.offsetLeft,
-          this.offsetLeft + this.clientWidth
-        ) &&
-        !inRange(
-          y - this.scrollTop - radius,
-          this.offsetTop,
-          this.offsetTop + this.clientHeight
-        ) &&
-        !inRange(
-          y + height - this.scrollTop + radius,
-          this.offsetTop,
-          this.offsetTop + this.clientHeight
-        )
-      ) {
-        continue;
-      }
+      // if (
+      //   !inRange(
+      //     x - this.scrollLeft,
+      //     this.offsetLeft,
+      //     this.offsetLeft + this.clientWidth,
+      //     true
+      //   ) &&
+      //   !inRange(
+      //     x + width - this.scrollLeft,
+      //     this.offsetLeft,
+      //     this.offsetLeft + this.clientWidth
+      //   ) &&
+      //   !inRange(
+      //     y - this.scrollTop,
+      //     this.offsetTop,
+      //     this.offsetTop + this.clientHeight
+      //   ) &&
+      //   !inRange(
+      //     y + height - this.scrollTop,
+      //     this.offsetTop,
+      //     this.offsetTop + this.clientHeight
+      //   )
+      // ) {
+      //   continue;
+      // }
       if (
         inRange(pointX + this.scrollLeft, x - radius, x + width + radius) &&
         inRange(pointY + this.scrollTop, y - radius, y + height + radius)
@@ -4914,27 +4939,31 @@ export class Panel {
       const width = elem.width;
       const height = elem.height;
 
-      const radius = this.style.activeFloatElementResizeArcRadius;
+      // const radius = this.style.activeFloatElementResizeArcRadius;
       return !(
         !inRange(
-          x - this.scrollLeft - radius,
+          x - this.scrollLeft,
           this.offsetLeft,
-          this.offsetLeft + this.clientWidth
+          this.offsetLeft + this.clientWidth,
+          true
         ) &&
         !inRange(
-          x + width - this.scrollLeft + radius,
+          x + width - this.scrollLeft,
           this.offsetLeft,
-          this.offsetLeft + this.clientWidth
+          this.offsetLeft + this.clientWidth,
+          true
         ) &&
         !inRange(
-          y - this.scrollTop - radius,
+          y - this.scrollTop,
           this.offsetTop,
-          this.offsetTop + this.clientHeight
+          this.offsetTop + this.clientHeight,
+          true
         ) &&
         !inRange(
-          y + height - this.scrollTop + radius,
+          y + height - this.scrollTop,
           this.offsetTop,
-          this.offsetTop + this.clientHeight
+          this.offsetTop + this.clientHeight,
+          true
         )
       );
     });
