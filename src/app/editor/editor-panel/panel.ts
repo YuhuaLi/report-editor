@@ -3867,6 +3867,8 @@ export class Panel {
           // event.preventDefault();
           if (!this.paste()) {
             event.preventDefault();
+          } else {
+            this.setClipStatusAnimation();
           }
         }
         break;
@@ -4086,7 +4088,8 @@ export class Panel {
             inRange(range.rowEnd, clipRowStart, clipRowEnd, true)) &&
           (inRange(range.columnStart, clipColumnStart, clipColumnEnd, true) ||
             inRange(range.columnEnd, clipColumnStart, clipColumnEnd, true))
-      )
+      ) ||
+      this.clipBoard.isCut
     ) {
       this.clipBoard = null;
     }
