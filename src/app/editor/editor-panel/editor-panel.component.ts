@@ -20,7 +20,8 @@ import { Panel } from './panel';
 })
 export class EditorPanelComponent
   extends Panel
-  implements OnInit, AfterViewInit {
+  implements OnInit, AfterViewInit
+{
   @ViewChild('panel') panel: ElementRef;
   @ViewChild('actionPanel') actionPanel: ElementRef;
   @ViewChild('animationPanel') animationPanel: ElementRef;
@@ -73,7 +74,8 @@ export class EditorPanelComponent
 
   editCellCompelte(change = true) {
     if (change) {
-      this.editingCell.content.html = this.cellEditor.editArea.nativeElement.innerHTML;
+      this.editingCell.content.html =
+        this.cellEditor.editArea.nativeElement.innerHTML;
     }
     super.editCellCompelte(change);
   }
@@ -230,21 +232,32 @@ export class EditorPanelComponent
     let curIndex = 0;
     for (const obj of textObj) {
       const textLen = obj.text.length;
+      // if (curIndex <= index && curIndex + obj.text.length > index) {
+      //   if (del.length < obj.text.length) {
+      //     obj.node.textContent = obj.node.textContent.replace(del, '');
+      //   } else {
+      //     if (curIndex === index) {
+      //       obj.node.parentNode.removeChild(obj.node);
+      //     } else {
+      //       obj.node.textContent = obj.node.textContent.substring(
+      //         curIndex,
+      //         index
+      //       );
+      //     }
+      //     del = del.substring(textLen - index + curIndex);
+      //     index += textLen - index + curIndex;
+      //   }
+      // }
       if (curIndex <= index && curIndex + obj.text.length > index) {
-        if (del.length < obj.text.length) {
-          obj.node.textContent = obj.node.textContent.replace(del, '');
+        if (curIndex === index && obj.text.length <= del.length) {
+          obj.node.parentNode.removeChild(obj.node);
         } else {
-          if (curIndex === index) {
-            obj.node.parentNode.removeChild(obj.node);
-          } else {
-            obj.node.textContent = obj.node.textContent.substring(
-              curIndex,
-              index
-            );
-          }
-          del = del.substring(textLen - index + curIndex);
-          index += textLen - index + curIndex;
+          obj.node.textContent =
+            obj.node.textContent.substring(0, index - curIndex) +
+            obj.node.textContent.substring(index - curIndex + del.length);
         }
+        del = del.substring(textLen - index + curIndex);
+        index += textLen - index + curIndex;
       }
       curIndex += textLen;
     }
@@ -262,7 +275,7 @@ export class EditorPanelComponent
     if (this.selection.length) {
       this.deleteCellValue(
         prev,
-        prev.replace(prev.substring(this.selection[0], this.selection[1]), ''),
+        prev.substring(0, this.selection[0]) + prev.substring(this.selection[1]),
         element,
         this.selection[0]
       );
